@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "a68a2586206a912671b37940a47052d9",
+    "identityHash": "7509efbc303a1126e635c55645c48752",
     "entities": [
       {
         "tableName": "books",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `filePath` TEXT NOT NULL, `fileName` TEXT NOT NULL, `format` TEXT NOT NULL, `title` TEXT NOT NULL, `author` TEXT, `series` TEXT, `seriesIndex` REAL, `seriesManual` INTEGER NOT NULL, `language` TEXT, `coverPath` TEXT, `addedAt` INTEGER NOT NULL, `lastOpenedAt` INTEGER, `locator` TEXT, `progress` REAL NOT NULL, `finished` INTEGER NOT NULL, `fileSize` INTEGER NOT NULL, `convertToSimplified` INTEGER)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `filePath` TEXT NOT NULL, `fileName` TEXT NOT NULL, `format` TEXT NOT NULL, `title` TEXT NOT NULL, `author` TEXT, `series` TEXT, `seriesIndex` REAL, `seriesManual` INTEGER NOT NULL, `language` TEXT, `coverPath` TEXT, `addedAt` INTEGER NOT NULL, `lastOpenedAt` INTEGER, `locator` TEXT, `progress` REAL NOT NULL, `finished` INTEGER NOT NULL, `fileSize` INTEGER NOT NULL, `isTraditional` INTEGER NOT NULL, `convertToSimplified` INTEGER)",
         "fields": [
           {
             "fieldPath": "id",
@@ -104,6 +104,12 @@
             "notNull": true
           },
           {
+            "fieldPath": "isTraditional",
+            "columnName": "isTraditional",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
             "fieldPath": "convertToSimplified",
             "columnName": "convertToSimplified",
             "affinity": "INTEGER"
@@ -119,7 +125,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a68a2586206a912671b37940a47052d9')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7509efbc303a1126e635c55645c48752')"
     ]
   }
 }

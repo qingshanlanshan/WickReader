@@ -89,6 +89,9 @@ class ReaderActivity : FragmentActivity() {
                     onGoToLink = ::goTo,
                     onGoToLocator = { navigator.go(it, animated = false) },
                     onSettingsChange = { s -> lifecycleScope.launch { shelfApp.settings.updateReader(s) } },
+                    isTraditional = session.book.isTraditional,
+                    bookSimplified = session.simplified,
+                    onBookSimplifiedChange = ::setBookSimplified,
                 )
             }
         }
@@ -122,6 +125,9 @@ class ReaderActivity : FragmentActivity() {
                         settings = s
                         navigator.submitPreferences(s.toEpubPreferences())
                         applySystemBars()
+                        // The global 繁→简 default changed in a way that affects this book.
+                        val book = shelfApp.library.get(bookId)
+                        if (book != null && book.showsSimplified(s.toSimplified) != session.simplified) reload()
                     }
                 }
                 launch {
@@ -133,6 +139,34 @@ class ReaderActivity : FragmentActivity() {
             }
         }
         applySystemBars()
+    }
+
+    private fun setBookSimplified(on: Boolean) {
+        lifecycleScope.launch {
+            val book = shelfApp.library.get(bookId) ?: return@launch
+            shelfApp.library.update(book.copy(convertToSimplified = on))
+            reload()
+        }
+    }
+
+    /** Reopens the book (e.g. with 繁→简 switched) at the current position. */
+    private var reloading = false
+
+    private fun reload() {
+        if (reloading) return
+        reloading = true
+        lifecycleScope.launch {
+            val loc = navigator.currentLocator.value
+            shelfApp.library.saveProgress(bookId, loc.toJSON().toString(), (loc.locations.totalProgression ?: 0.0).toFloat())
+            shelfApp.readers.close(bookId)
+            shelfApp.readers.open(bookId)
+                .onSuccess {
+                    startActivity(intent(this@ReaderActivity, bookId))
+                    finish()
+                    @Suppress("DEPRECATION") overridePendingTransition(0, 0)
+                }
+                .onFailure { reloading = false }
+        }
     }
 
     private fun goTo(link: Link) {
@@ -176,7 +210,7 @@ class ReaderActivity : FragmentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (isFinishing) shelfApp.readers.close(bookId)
+        if (isFinishing && ::session.isInitialized) shelfApp.readers.close(bookId, only = session)
     }
 
     companion object {

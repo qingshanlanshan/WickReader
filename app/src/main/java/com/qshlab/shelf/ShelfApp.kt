@@ -39,7 +39,7 @@ class ShelfApp : Application() {
         val db = Room.databaseBuilder(this, ShelfDatabase::class.java, "shelf.db").build()
         library = LibraryRepository(this, db.books(), assetRetriever, publicationOpener)
         settings = SettingsRepository(dataStore)
-        readers = ReaderRepository(library)
+        readers = ReaderRepository(library, settings)
     }
 }
 

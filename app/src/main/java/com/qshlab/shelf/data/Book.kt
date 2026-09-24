@@ -35,6 +35,8 @@ data class Book(
     val progress: Float = 0f,
     val finished: Boolean = false,
     val fileSize: Long = 0,
+    /** Detected at import from language metadata or the text itself. */
+    val isTraditional: Boolean = false,
     /** Per-book override of 繁→简 conversion: null = follow the global setting. */
     val convertToSimplified: Boolean? = null,
 )

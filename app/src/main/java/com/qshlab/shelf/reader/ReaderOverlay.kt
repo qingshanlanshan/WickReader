@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
@@ -87,6 +89,9 @@ fun ReaderOverlay(
     onGoToLink: (Link) -> Unit,
     onGoToLocator: (Locator) -> Unit,
     onSettingsChange: (ReaderSettings) -> Unit,
+    isTraditional: Boolean,
+    bookSimplified: Boolean,
+    onBookSimplifiedChange: (Boolean) -> Unit,
 ) {
     val dark = settings.theme == ReaderTheme.DARK
     val colors = if (dark) darkColorScheme() else lightColorScheme(surface = settings.theme.paper())
@@ -171,16 +176,30 @@ fun ReaderOverlay(
 
         if (sheet == "settings") {
             ModalBottomSheet(onDismissRequest = { sheet = null }) {
-                ReaderSettingsPanel(settings, onSettingsChange)
+                ReaderSettingsPanel(settings, onSettingsChange, isTraditional, bookSimplified, onBookSimplifiedChange)
             }
         }
     }
 }
 
 @Composable
-private fun ReaderSettingsPanel(s: ReaderSettings, onChange: (ReaderSettings) -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+private fun ReaderSettingsPanel(
+    s: ReaderSettings,
+    onChange: (ReaderSettings) -> Unit,
+    isTraditional: Boolean,
+    bookSimplified: Boolean,
+    onBookSimplifiedChange: (Boolean) -> Unit,
+) {
+    Column(
+        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         Text("阅读设置", style = MaterialTheme.typography.titleMedium)
+
+        Label("繁简转换")
+        SwitchRow(if (isTraditional) "本书显示为简体（检测到繁体）" else "本书显示为简体", bookSimplified) { onBookSimplifiedChange(it) }
+        SwitchRow("繁体书默认显示为简体", s.toSimplified) { onChange(s.copy(toSimplified = it)) }
+        HorizontalDivider(Modifier.padding(vertical = 6.dp))
 
         Label("主题")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

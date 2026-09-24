@@ -10,10 +10,15 @@ import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import com.qshlab.shelf.chinese.ChineseConverter
+import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.services.cover
+import org.readium.r2.shared.util.Try
 import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.shared.util.getOrElse
+import org.readium.r2.shared.util.resource.TransformingContainer
+import org.readium.r2.shared.util.resource.map
 import org.readium.r2.shared.util.toUrl
 import org.readium.r2.streamer.PublicationOpener
 
@@ -109,7 +114,7 @@ class LibraryRepository(
             return ImportResult.Skipped(name, "文件损坏或格式不支持")
         }
         try {
-            val book = describe(publication, dest, name, size)
+            val book = describe(publication, dest, name, size).copy(isTraditional = detectTraditional(publication))
             val id = dao.insert(book)
             val coverPath = publication.cover()?.let { saveCover(id, it) }
             val saved = book.copy(id = id, coverPath = coverPath)
@@ -120,12 +125,45 @@ class LibraryRepository(
         }
     }
 
-    suspend fun openPublication(file: File): Publication? {
+    /**
+     * Opens a book file. With [toSimplified], every (X)HTML resource and the table of contents are
+     * converted 繁→简 as they are read; the file itself is never modified.
+     */
+    suspend fun openPublication(file: File, toSimplified: Boolean = false): Publication? {
         val asset = assetRetriever.retrieve(file.toUrl(isDirectory = false)).getOrElse { return null }
-        return publicationOpener.open(asset, allowUserInteraction = false).getOrElse {
+        val converter = if (toSimplified) ChineseConverter.get(context) else null
+        return publicationOpener.open(asset, allowUserInteraction = false, onCreatePublication = {
+            if (converter != null) {
+                container = TransformingContainer(container) { url, resource ->
+                    val path = url.toString().substringBefore('?').lowercase()
+                    if (path.endsWith(".xhtml") || path.endsWith(".html") || path.endsWith(".htm")) {
+                        resource.map { bytes -> Try.success(converter.htmlToSimplified(bytes.decodeToString()).encodeToByteArray()) }
+                    } else {
+                        resource
+                    }
+                }
+                fun convert(links: List<Link>): List<Link> =
+                    links.map { it.copy(title = it.title?.let(converter::toSimplified), children = convert(it.children)) }
+                manifest = manifest.copy(tableOfContents = convert(manifest.tableOfContents))
+            }
+        }).getOrElse {
             asset.close()
             return null
         }
+    }
+
+    /** 繁體 if the metadata says so, or if the opening chapters use Traditional-only characters. */
+    private suspend fun detectTraditional(publication: Publication): Boolean {
+        val lang = publication.metadata.languages.joinToString(",").lowercase()
+        if (Regex("zh-(tw|hk|mo|hant)").containsMatchIn(lang)) return true
+        if (lang.isNotEmpty() && !lang.startsWith("zh") && !lang.contains(",zh")) return false
+        val sample = StringBuilder()
+        for (link in publication.readingOrder.take(6)) {
+            val html = publication.get(link)?.read()?.getOrNull()?.decodeToString() ?: continue
+            sample.append(html.replace(Regex("<[^>]*>"), ""))
+            if (sample.length > 20_000) break
+        }
+        return ChineseConverter.get(context).traditionalRatio(sample.toString()) > 0.03
     }
 
     private fun describe(publication: Publication, file: File, fileName: String, size: Long): Book {

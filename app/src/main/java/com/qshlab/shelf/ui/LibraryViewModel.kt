@@ -5,7 +5,9 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.qshlab.shelf.data.Book
+import com.qshlab.shelf.chinese.ChineseConverter
 import com.qshlab.shelf.data.ImportResult
+import com.qshlab.shelf.reader.showsSimplified
 import com.qshlab.shelf.settings.LibrarySettings
 import com.qshlab.shelf.settings.LibraryTab
 import com.qshlab.shelf.settings.SortOrder
@@ -62,9 +64,18 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     private val events = Channel<String>(Channel.BUFFERED)
     val messages = events.receiveAsFlow()
 
-    val state: StateFlow<LibraryState> = combine(shelf.library.observeBooks(), shelf.settings.library, query) { books, settings, q ->
-        build(books, settings, q)
+    private val converter by lazy { ChineseConverter.get(app) }
+
+    val state: StateFlow<LibraryState> = combine(
+        shelf.library.observeBooks(), shelf.settings.library, shelf.settings.reader, query,
+    ) { books, settings, reader, q ->
+        build(books.map { it.forDisplay(reader.toSimplified) }, settings, q)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LibraryState())
+
+    /** Books read in 简体 are also listed in 简体 (title, author, series). */
+    private fun Book.forDisplay(globalSimplified: Boolean): Book =
+        if (!showsSimplified(globalSimplified)) this
+        else copy(title = converter.toSimplified(title), author = author?.let(converter::toSimplified), series = series?.let(converter::toSimplified))
 
     init {
         viewModelScope.launch { report(shelf.library.importInbox(), quietIfEmpty = true) }

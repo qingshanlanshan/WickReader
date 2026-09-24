@@ -69,4 +69,6 @@ dependencies {
     implementation(libs.readium.shared)
     implementation(libs.readium.streamer)
     implementation(libs.readium.navigator)
+
+    testImplementation(libs.junit)
 }
