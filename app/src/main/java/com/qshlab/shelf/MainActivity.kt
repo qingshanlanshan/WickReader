@@ -1,0 +1,70 @@
+package com.qshlab.shelf
+
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.qshlab.shelf.reader.ReaderActivity
+import com.qshlab.shelf.ui.GroupKind
+import com.qshlab.shelf.ui.GroupScreen
+import com.qshlab.shelf.ui.LibraryScreen
+import com.qshlab.shelf.ui.LibraryViewModel
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            ShelfTheme {
+                val nav = rememberNavController()
+                val vm: LibraryViewModel = viewModel()
+                val openBook = { book: com.qshlab.shelf.data.Book ->
+                    vm.open(book) { id -> startActivity(ReaderActivity.intent(this, id)) }
+                }
+                NavHost(nav, startDestination = "library") {
+                    composable("library") {
+                        LibraryScreen(
+                            vm = vm,
+                            onOpenBook = openBook,
+                            onOpenSeries = { nav.navigate("series/${Uri.encode(it)}") },
+                            onOpenAuthor = { nav.navigate("author/${Uri.encode(it)}") },
+                        )
+                    }
+                    composable("series/{name}") { entry ->
+                        GroupScreen(vm, GroupKind.SERIES, Uri.decode(entry.arguments?.getString("name").orEmpty()), { nav.popBackStack() }, openBook)
+                    }
+                    composable("author/{name}") { entry ->
+                        GroupScreen(vm, GroupKind.AUTHOR, Uri.decode(entry.arguments?.getString("name").orEmpty()), { nav.popBackStack() }, openBook)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ShelfTheme(content: @Composable () -> Unit) {
+    val dark = isSystemInDarkTheme()
+    val context = LocalContext.current
+    val colors = when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        dark -> darkColorScheme(primary = Color(0xFF8CC7B0))
+        else -> lightColorScheme(primary = Color(0xFF2E5E4E), secondaryContainer = Color(0xFFD9EDE3))
+    }
+    MaterialTheme(colorScheme = colors, content = content)
+}

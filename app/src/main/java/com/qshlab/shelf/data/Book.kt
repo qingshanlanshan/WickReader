@@ -1,0 +1,75 @@
+package com.qshlab.shelf.data
+
+import androidx.room.Dao
+import androidx.room.Database
+import androidx.room.Entity
+import androidx.room.Insert
+import androidx.room.PrimaryKey
+import androidx.room.Query
+import androidx.room.RoomDatabase
+import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
+
+@Entity(tableName = "books")
+data class Book(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /** The book file inside app storage. */
+    val filePath: String,
+    /** Original file name, used for display fallbacks and series detection. */
+    val fileName: String,
+    /** Lower-case extension: epub, pdf, … */
+    val format: String,
+    val title: String,
+    val author: String?,
+    val series: String?,
+    val seriesIndex: Double?,
+    /** True once the user edited the series by hand; detection won't touch it again. */
+    val seriesManual: Boolean = false,
+    val language: String?,
+    val coverPath: String?,
+    val addedAt: Long,
+    val lastOpenedAt: Long? = null,
+    /** Readium locator JSON of the last reading position. */
+    val locator: String? = null,
+    /** 0..1 across the whole book. */
+    val progress: Float = 0f,
+    val finished: Boolean = false,
+    val fileSize: Long = 0,
+    /** Per-book override of 繁→简 conversion: null = follow the global setting. */
+    val convertToSimplified: Boolean? = null,
+)
+
+@Dao
+interface BookDao {
+    @Query("SELECT * FROM books")
+    fun observeAll(): Flow<List<Book>>
+
+    @Query("SELECT * FROM books WHERE id = :id")
+    suspend fun get(id: Long): Book?
+
+    @Query("SELECT * FROM books WHERE id = :id")
+    fun observe(id: Long): Flow<Book?>
+
+    @Query("SELECT COUNT(*) FROM books WHERE fileName = :fileName AND fileSize = :fileSize")
+    suspend fun countDuplicates(fileName: String, fileSize: Long): Int
+
+    @Insert
+    suspend fun insert(book: Book): Long
+
+    @Update
+    suspend fun update(book: Book)
+
+    @Query("UPDATE books SET locator = :locator, progress = :progress, lastOpenedAt = :openedAt, finished = finished OR :finished WHERE id = :id")
+    suspend fun updateProgress(id: Long, locator: String, progress: Float, openedAt: Long, finished: Boolean)
+
+    @Query("UPDATE books SET lastOpenedAt = :openedAt WHERE id = :id")
+    suspend fun touch(id: Long, openedAt: Long)
+
+    @Query("DELETE FROM books WHERE id = :id")
+    suspend fun delete(id: Long)
+}
+
+@Database(entities = [Book::class], version = 1, exportSchema = true)
+abstract class ShelfDatabase : RoomDatabase() {
+    abstract fun books(): BookDao
+}
