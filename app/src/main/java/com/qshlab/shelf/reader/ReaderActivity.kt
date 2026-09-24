@@ -1,6 +1,9 @@
 package com.qshlab.shelf.reader
 
+import android.Manifest
 import android.content.ClipData
+import android.content.pm.PackageManager
+import android.os.Build
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
@@ -262,6 +265,11 @@ class ReaderActivity : FragmentActivity() {
             tts = nav
             ttsActive = true
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            // Keeps reading with the screen off / in the background, with lock-screen controls.
+            ReadAloudService.start(this@ReaderActivity, nav.asMedia3Player()) { runOnUiThread { stopTts() } }
+            if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+            }
             ttsJob = lifecycleScope.launch {
                 launch {
                     nav.location.collect { loc ->
@@ -324,6 +332,7 @@ class ReaderActivity : FragmentActivity() {
     }
 
     private fun stopTts() {
+        if (tts != null) ReadAloudService.stop(this)
         ttsJob?.cancel()
         ttsJob = null
         tts?.close()
@@ -413,6 +422,7 @@ class ReaderActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
+        if (tts != null) ReadAloudService.stop(this)
         tts?.close()
         super.onDestroy()
         if (isFinishing && ::session.isInitialized) shelfApp.readers.close(bookId, only = session)

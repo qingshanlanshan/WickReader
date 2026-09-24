@@ -17,6 +17,7 @@ readium = "3.4.0"
 documentfile = "1.1.0"
 junit = "4.13.2"
 mlkit-translate = "17.0.3"
+media3 = "1.11.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
@@ -44,6 +45,7 @@ readium-navigator = { module = "org.readium.kotlin-toolkit:readium-navigator", v
 readium-navigator-media-tts = { module = "org.readium.kotlin-toolkit:readium-navigator-media-tts", version.ref = "readium" }
 junit = { module = "junit:junit", version.ref = "junit" }
 mlkit-translate = { module = "com.google.mlkit:translate", version.ref = "mlkit-translate" }
+media3-session = { module = "androidx.media3:media3-session", version.ref = "media3" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
