@@ -95,6 +95,23 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { events.send("正在导入 ${uris.size} 个文件…"); report(shelf.library.importUris(uris)) }
     }
 
+    /** A file opened with / shared to the app: import it, then open it (or the existing copy). */
+    fun importAndOpen(uri: Uri, onReady: (Long) -> Unit) {
+        viewModelScope.launch {
+            val result = shelf.library.importUris(listOf(uri)).firstOrNull()
+            val book = when (result) {
+                is ImportResult.Added -> result.book
+                is ImportResult.Skipped -> if (result.reason == "已在书架中") shelf.library.findByName(result.name) else null
+                null -> null
+            }
+            if (book == null) {
+                events.send((result as? ImportResult.Skipped)?.let { "无法打开：${it.reason}" } ?: "无法打开这个文件")
+                return@launch
+            }
+            open(book, onReady)
+        }
+    }
+
     fun importFolder(uri: Uri) {
         viewModelScope.launch { events.send("正在扫描文件夹…"); report(shelf.library.importTree(uri)) }
     }

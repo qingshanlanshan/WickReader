@@ -56,6 +56,9 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE id = :id")
     fun observe(id: Long): Flow<Book?>
 
+    @Query("SELECT * FROM books WHERE fileName = :fileName ORDER BY addedAt DESC LIMIT 1")
+    suspend fun findByName(fileName: String): Book?
+
     @Query("SELECT COUNT(*) FROM books WHERE fileName = :fileName AND fileSize = :fileSize")
     suspend fun countDuplicates(fileName: String, fileSize: Long): Int
 

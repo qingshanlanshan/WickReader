@@ -54,6 +54,8 @@ class LibraryRepository(
 
     suspend fun get(id: Long): Book? = dao.get(id)
 
+    suspend fun findByName(fileName: String): Book? = dao.findByName(fileName)
+
     suspend fun importUris(uris: List<Uri>): List<ImportResult> = uris.map { importUri(it) }
 
     /** Imports every supported file in a folder tree picked with OpenDocumentTree. */

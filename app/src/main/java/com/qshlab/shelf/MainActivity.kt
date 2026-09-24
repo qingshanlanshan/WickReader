@@ -1,6 +1,8 @@
 package com.qshlab.shelf
 
+import android.content.Intent
 import android.net.Uri
+import androidx.core.content.IntentCompat
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -28,6 +30,24 @@ import com.qshlab.shelf.ui.LibraryScreen
 import com.qshlab.shelf.ui.LibraryViewModel
 
 class MainActivity : ComponentActivity() {
+    private var vm: LibraryViewModel? = null
+
+    /** EPUB/TXT opened with or shared to the app. */
+    private fun handleIncoming(intent: Intent?) {
+        val uri: Uri = when (intent?.action) {
+            Intent.ACTION_VIEW -> intent.data
+            Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+            else -> null
+        } ?: return
+        intent?.action = null // handle once
+        vm?.importAndOpen(uri) { id -> startActivity(ReaderActivity.intent(this, id)) }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIncoming(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -35,6 +55,10 @@ class MainActivity : ComponentActivity() {
             ShelfTheme {
                 val nav = rememberNavController()
                 val vm: LibraryViewModel = viewModel()
+                androidx.compose.runtime.LaunchedEffect(vm) {
+                    this@MainActivity.vm = vm
+                    if (savedInstanceState == null) handleIncoming(intent)
+                }
                 val openBook = { book: com.qshlab.shelf.data.Book ->
                     vm.open(book) { id -> startActivity(ReaderActivity.intent(this, id)) }
                 }
