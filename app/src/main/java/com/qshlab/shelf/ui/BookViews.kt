@@ -98,9 +98,20 @@ private fun percent(p: Float): String = if (p <= 0f) "未读" else if (p >= 0.99
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun GridBookCell(book: Book, onClick: () -> Unit, onLongClick: () -> Unit) {
+fun GridBookCell(book: Book, onClick: () -> Unit, onLongClick: () -> Unit, badge: String? = null) {
     Column(Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(6.dp)) {
-        Cover(book, Modifier.fillMaxWidth())
+        Box {
+            Cover(book, Modifier.fillMaxWidth())
+            if (badge != null) {
+                Surface(
+                    shape = RoundedCornerShape(topStart = 6.dp, bottomEnd = 8.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
+                    modifier = Modifier.align(Alignment.TopStart),
+                ) {
+                    Text(badge, Modifier.padding(horizontal = 7.dp, vertical = 2.dp), color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
         Text(book.title, Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
         if (book.progress > 0f) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
@@ -199,5 +210,28 @@ fun CompactStackRow(stack: ShelfItem.Stack, onClick: () -> Unit) {
             Text("系列 · ${stack.books.first().author ?: ""}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         }
         Box(Modifier.size(8.dp))
+    }
+}
+
+/** "继续阅读" card for the most recently read book. */
+@Composable
+fun ContinueCard(book: Book, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp),
+    ) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Cover(book, Modifier.width(54.dp), corner = 4.dp, small = true)
+            Column(Modifier.weight(1f).padding(start = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("继续阅读", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Text(book.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Progress(book.progress, Modifier.width(120.dp))
+                    Text(if (book.progress <= 0f) "刚开始" else percent(book.progress), Modifier.padding(start = 8.dp), style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
     }
 }

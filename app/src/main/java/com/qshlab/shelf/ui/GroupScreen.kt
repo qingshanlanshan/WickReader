@@ -51,7 +51,10 @@ fun GroupScreen(vm: LibraryViewModel, kind: GroupKind, name: String, onBack: () 
         },
     ) { padding ->
         Column(Modifier.padding(padding)) {
-            ShelfItems(books.map { ShelfItem.Single(it) }, state.settings.viewMode, onOpenBook, {}) { actionsFor = it }
+            ShelfItems(
+                books.map { ShelfItem.Single(it) }, state.settings.viewMode, onOpenBook, {},
+                badge = { b -> if (kind == GroupKind.SERIES) b.seriesIndex?.let { "第${formatIndex(it)}卷" } else null },
+            ) { actionsFor = it }
         }
     }
     actionsFor?.let { book ->

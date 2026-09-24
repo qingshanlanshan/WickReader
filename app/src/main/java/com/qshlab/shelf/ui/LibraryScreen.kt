@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
@@ -188,7 +189,13 @@ fun LibraryScreen(
                         }
                     }
                     when (s.tab) {
-                        LibraryTab.SHELF -> ShelfItems(state.shelf, s.viewMode, onOpenBook, onOpenSeries) { actionsFor = it }
+                        LibraryTab.SHELF -> {
+                            val current = state.allBooks.filter { it.lastOpenedAt != null && !it.finished }.maxByOrNull { it.lastOpenedAt!! }
+                            ShelfItems(
+                                state.shelf, s.viewMode, onOpenBook, onOpenSeries,
+                                header = if (current != null && state.query.isBlank()) ({ ContinueCard(current) { onOpenBook(current) } }) else null,
+                            ) { actionsFor = it }
+                        }
                         LibraryTab.AUTHORS -> GroupList(state.groups, "位作者", onOpenAuthor, onOpenBook)
                         LibraryTab.SERIES -> GroupList(state.groups, "个系列", onOpenSeries, onOpenBook)
                         else -> if (state.flat.isEmpty()) {
@@ -228,6 +235,8 @@ fun ShelfItems(
     mode: ViewMode,
     onOpenBook: (Book) -> Unit,
     onOpenSeries: (String) -> Unit,
+    header: (@Composable () -> Unit)? = null,
+    badge: (Book) -> String? = { null },
     onLongPress: (Book) -> Unit,
 ) {
     val bottom = PaddingValues(bottom = 96.dp)
@@ -237,14 +246,16 @@ fun ShelfItems(
             contentPadding = PaddingValues(start = 10.dp, end = 10.dp, bottom = 96.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
+            if (header != null) item(span = { GridItemSpan(maxLineSpan) }) { header() }
             items(items, key = { it.key }) { item ->
                 when (item) {
-                    is ShelfItem.Single -> GridBookCell(item.book, { onOpenBook(item.book) }, { onLongPress(item.book) })
+                    is ShelfItem.Single -> GridBookCell(item.book, { onOpenBook(item.book) }, { onLongPress(item.book) }, badge(item.book))
                     is ShelfItem.Stack -> GridStackCell(item) { onOpenSeries(item.name) }
                 }
             }
         }
         ViewMode.LIST, ViewMode.COMPACT -> LazyColumn(contentPadding = bottom, modifier = Modifier.fillMaxSize()) {
+            if (header != null) item { Box(Modifier.padding(horizontal = 10.dp)) { header() } }
             items(items, key = { it.key }) { item ->
                 when (item) {
                     is ShelfItem.Single ->
