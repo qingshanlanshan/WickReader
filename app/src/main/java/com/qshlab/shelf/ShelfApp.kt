@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
+import com.qshlab.shelf.catalog.CatalogRepository
 import com.qshlab.shelf.data.AnnotationDao
 import com.qshlab.shelf.data.LibraryRepository
 import com.qshlab.shelf.data.ShelfDatabase
@@ -26,6 +27,8 @@ class ShelfApp : Application() {
         private set
     lateinit var annotations: AnnotationDao
         private set
+    lateinit var catalogs: CatalogRepository
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -43,6 +46,7 @@ class ShelfApp : Application() {
         annotations = db.annotations()
         library = LibraryRepository(this, db.books(), assetRetriever, publicationOpener, annotations)
         settings = SettingsRepository(dataStore)
+        catalogs = CatalogRepository(dataStore)
         readers = ReaderRepository(library, settings)
     }
 }

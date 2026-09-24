@@ -19,6 +19,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.qshlab.shelf.catalog.CatalogsScreen
+import com.qshlab.shelf.catalog.FeedScreen
 import com.qshlab.shelf.reader.ReaderActivity
 import com.qshlab.shelf.ui.GroupKind
 import com.qshlab.shelf.ui.GroupScreen
@@ -43,6 +45,18 @@ class MainActivity : ComponentActivity() {
                             onOpenBook = openBook,
                             onOpenSeries = { nav.navigate("series/${Uri.encode(it)}") },
                             onOpenAuthor = { nav.navigate("author/${Uri.encode(it)}") },
+                            onOpenCatalogs = { nav.navigate("catalogs") },
+                        )
+                    }
+                    composable("catalogs") {
+                        CatalogsScreen(onBack = { nav.popBackStack() }, onOpen = { c -> nav.navigate("feed?title=${Uri.encode(c.name)}&url=${Uri.encode(c.url)}") })
+                    }
+                    composable("feed?title={title}&url={url}") { entry ->
+                        FeedScreen(
+                            title = Uri.decode(entry.arguments?.getString("title").orEmpty()),
+                            url = Uri.decode(entry.arguments?.getString("url").orEmpty()),
+                            onBack = { nav.popBackStack() },
+                            onOpenFeed = { t, u -> nav.navigate("feed?title=${Uri.encode(t)}&url=${Uri.encode(u)}") },
                         )
                     }
                     composable("series/{name}") { entry ->

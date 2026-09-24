@@ -78,6 +78,9 @@ class LibraryRepository(
         }
     }
 
+    /** Imports a file downloaded from an online catalog. */
+    suspend fun importDownloaded(file: File, name: String): ImportResult = withContext(Dispatchers.IO) { importFile(file, name, move = true) }
+
     private suspend fun importUri(uri: Uri, knownName: String? = null, knownSize: Long? = null): ImportResult =
         withContext(Dispatchers.IO) {
             val (name, size) = if (knownName != null && knownSize != null) knownName to knownSize else queryNameAndSize(uri)

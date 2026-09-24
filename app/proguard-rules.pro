@@ -10,3 +10,4 @@
 -keep class com.google.mlkit.** { *; }
 -keep class com.google.android.gms.internal.mlkit_translate.** { *; }
 -keep class com.google.android.gms.internal.mlkit_common.** { *; }
+-dontwarn org.xmlpull.v1.**

@@ -75,6 +75,7 @@ fun LibraryScreen(
     onOpenBook: (Book) -> Unit,
     onOpenSeries: (String) -> Unit,
     onOpenAuthor: (String) -> Unit,
+    onOpenCatalogs: () -> Unit,
 ) {
     val state by vm.state.collectAsState()
     val snackbar = remember { SnackbarHostState() }
@@ -142,6 +143,7 @@ fun LibraryScreen(
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                                 DropdownMenuItem(text = { Text("导入文件") }, onClick = { menu = false; importFiles() })
                                 DropdownMenuItem(text = { Text("导入文件夹") }, onClick = { menu = false; pickFolder.launch(null) })
+                                DropdownMenuItem(text = { Text("在线书库（OPDS）") }, onClick = { menu = false; onOpenCatalogs() })
                                 HorizontalDivider()
                                 DropdownMenuItem(
                                     text = { Text(if (s.stackSeries) "系列：叠放显示 ✓" else "系列：逐本显示") },
@@ -167,7 +169,7 @@ fun LibraryScreen(
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
                 !state.loaded -> Unit
-                state.allBooks.isEmpty() -> EmptyShelf(importFiles) { pickFolder.launch(null) }
+                state.allBooks.isEmpty() -> EmptyShelf(importFiles, { pickFolder.launch(null) }, onOpenCatalogs)
                 else -> Column {
                     if (s.tab == LibraryTab.SHELF) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -298,11 +300,12 @@ private fun GroupList(groups: List<Group>, unit: String, onOpenGroup: (String) -
 }
 
 @Composable
-private fun EmptyShelf(onImportFiles: () -> Unit, onImportFolder: () -> Unit) {
+private fun EmptyShelf(onImportFiles: () -> Unit, onImportFolder: () -> Unit, onOpenCatalogs: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         Text("书架是空的", style = MaterialTheme.typography.titleLarge)
         Text("导入 EPUB 或 TXT 电子书开始阅读", Modifier.padding(top = 8.dp, bottom = 20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         ExtendedFloatingActionButton(onClick = onImportFiles, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("导入文件") })
         TextButton(onClick = onImportFolder, modifier = Modifier.padding(top = 8.dp)) { Text("导入整个文件夹") }
+        TextButton(onClick = onOpenCatalogs) { Text("从在线书库下载公版书") }
     }
 }

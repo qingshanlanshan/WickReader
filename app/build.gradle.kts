@@ -92,6 +92,7 @@ dependencies {
     implementation(libs.readium.streamer)
     implementation(libs.readium.navigator)
     implementation(libs.readium.navigator.media.tts)
+    implementation(libs.readium.opds)
     implementation(libs.mlkit.translate)
     implementation(libs.media3.session)
 
