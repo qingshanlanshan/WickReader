@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -15,6 +17,9 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+        // 64-bit ARM covers practically every phone from the last ~8 years; the ML Kit
+        // translation engine alone is ~16 MB per architecture.
+        ndk { abiFilters += "arm64-v8a" }
     }
 
     buildFeatures {
@@ -28,11 +33,28 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // Release signing key lives outside git (keystore/ + keystore.properties). Keep a backup:
+    // Android only installs updates signed with the same key.
+    val keystoreProps = rootProject.file("keystore.properties").takeIf { it.exists() }?.let { f ->
+        Properties().apply { f.inputStream().use(::load) }
+    }
+    signingConfigs {
+        if (keystoreProps != null) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
-            // Personal sideloaded build for now; a real keystore comes later.
-            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 }
