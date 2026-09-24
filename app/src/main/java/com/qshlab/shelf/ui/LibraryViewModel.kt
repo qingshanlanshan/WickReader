@@ -72,6 +72,12 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         build(books.map { it.forDisplay(reader.toSimplified) }, settings, q)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LibraryState())
 
+    /**
+     * Series are matched on their 简体 form, so volumes shown in different scripts (one switched to
+     * 简体, one not) still group together.
+     */
+    fun seriesKey(series: String?): String? = series?.let(converter::toSimplified)
+
     /** Books read in 简体 are also listed in 简体 (title, author, series). */
     private fun Book.forDisplay(globalSimplified: Boolean): Book =
         if (!showsSimplified(globalSimplified)) this
@@ -112,7 +118,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun report(results: List<ImportResult>, quietIfEmpty: Boolean = false) {
         if (results.isEmpty()) {
-            if (!quietIfEmpty) events.send("没有找到可导入的书（目前支持 EPUB）")
+            if (!quietIfEmpty) events.send("没有找到可导入的书（目前支持 EPUB、TXT）")
             return
         }
         val added = results.count { it is ImportResult.Added }
@@ -144,8 +150,8 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
                     .sortedWith { a, b -> collator.compare(a.name, b.name) },
             )
             LibraryTab.SERIES -> base.copy(
-                groups = filtered.filter { it.series != null }.groupBy { it.series!! }
-                    .map { (name, list) -> Group(name, seriesOrder(list)) }
+                groups = filtered.filter { it.series != null }.groupBy { seriesKey(it.series)!! }
+                    .map { (_, list) -> seriesOrder(list).let { Group(it.first().series!!, it) } }
                     .sortedWith { a, b -> collator.compare(a.name, b.name) },
             )
         }
@@ -162,14 +168,14 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     /** Series with 2+ books become one stack, placed where its best-ranked volume would be. */
     private fun stack(sorted: List<Book>, settings: LibrarySettings): List<ShelfItem> {
         if (!settings.stackSeries) return sorted.map { ShelfItem.Single(it) }
-        val bySeries = sorted.filter { it.series != null }.groupBy { it.series!! }
+        val bySeries = sorted.filter { it.series != null }.groupBy { seriesKey(it.series)!! }
         val placed = mutableSetOf<String>()
         return sorted.mapNotNull { book ->
-            val s = book.series
-            val members = s?.let { bySeries[it] }
+            val key = seriesKey(book.series)
+            val members = key?.let { bySeries[it] }
             when {
-                s == null || members == null || members.size < 2 -> ShelfItem.Single(book)
-                placed.add(s) -> ShelfItem.Stack(s, seriesOrder(members))
+                key == null || members == null || members.size < 2 -> ShelfItem.Single(book)
+                placed.add(key) -> seriesOrder(members).let { ShelfItem.Stack(it.first().series!!, it) }
                 else -> null
             }
         }

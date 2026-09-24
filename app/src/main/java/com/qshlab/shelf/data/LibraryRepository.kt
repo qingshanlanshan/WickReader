@@ -23,7 +23,7 @@ import org.readium.r2.shared.util.toUrl
 import org.readium.r2.streamer.PublicationOpener
 
 /** Book formats the reader can open right now. */
-val SUPPORTED_EXTENSIONS = setOf("epub")
+val SUPPORTED_EXTENSIONS = setOf("epub", "txt")
 
 sealed interface ImportResult {
     data class Added(val book: Book) : ImportResult
@@ -101,8 +101,20 @@ class LibraryRepository(
             if (move) source.delete()
             return ImportResult.Skipped(name, "已在书架中")
         }
-        val dest = File(booksDir, "${UUID.randomUUID()}.$ext")
-        if (move && source.renameTo(dest).not()) {
+        // TXT is converted once into an EPUB; everything downstream only deals with EPUB.
+        val dest = File(booksDir, "${UUID.randomUUID()}.epub")
+        if (ext == "txt") {
+            val converted = runCatching { TxtToEpub.convert(source, name, dest) }
+            if (move) source.delete()
+            if (converted.isFailure) {
+                dest.delete()
+                return ImportResult.Skipped(name, "无法解析这个 TXT")
+            }
+            if (converted.getOrThrow().chapters.all { it.lines.all(String::isBlank) }) {
+                dest.delete()
+                return ImportResult.Skipped(name, "文件是空的")
+            }
+        } else if (move && source.renameTo(dest).not()) {
             source.copyTo(dest)
             source.delete()
         } else if (!move) {

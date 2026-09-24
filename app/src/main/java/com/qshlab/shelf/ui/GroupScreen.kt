@@ -30,7 +30,7 @@ fun GroupScreen(vm: LibraryViewModel, kind: GroupKind, name: String, onBack: () 
     val state by vm.state.collectAsState()
     var actionsFor by remember { mutableStateOf<Book?>(null) }
     val books = when (kind) {
-        GroupKind.SERIES -> seriesOrder(state.allBooks.filter { it.series == name })
+        GroupKind.SERIES -> vm.seriesKey(name).let { key -> seriesOrder(state.allBooks.filter { vm.seriesKey(it.series) == key }) }
         GroupKind.AUTHOR -> state.allBooks.filter { (it.author ?: "未知作者") == name }.sortedBy { it.title }
     }
     Scaffold(

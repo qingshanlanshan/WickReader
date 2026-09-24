@@ -91,7 +91,7 @@ fun LibraryScreen(
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) vm.importFolder(uri)
     }
-    val importFiles = { pickFiles.launch(arrayOf("application/epub+zip", "application/octet-stream", "*/*")) }
+    val importFiles = { pickFiles.launch(arrayOf("application/epub+zip", "text/plain", "application/octet-stream", "*/*")) }
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     Scaffold(
@@ -290,7 +290,7 @@ private fun GroupList(groups: List<Group>, unit: String, onOpenGroup: (String) -
 private fun EmptyShelf(onImportFiles: () -> Unit, onImportFolder: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         Text("书架是空的", style = MaterialTheme.typography.titleLarge)
-        Text("导入 EPUB 电子书开始阅读", Modifier.padding(top = 8.dp, bottom = 20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("导入 EPUB 或 TXT 电子书开始阅读", Modifier.padding(top = 8.dp, bottom = 20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         ExtendedFloatingActionButton(onClick = onImportFiles, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("导入文件") })
         TextButton(onClick = onImportFolder, modifier = Modifier.padding(top = 8.dp)) { Text("导入整个文件夹") }
     }
