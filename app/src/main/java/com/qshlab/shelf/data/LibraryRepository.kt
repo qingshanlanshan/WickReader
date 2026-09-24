@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import com.qshlab.shelf.chinese.ChineseConverter
+import com.qshlab.shelf.translate.ChapterTranslator
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.services.cover
@@ -141,19 +142,27 @@ class LibraryRepository(
      * Opens a book file. With [toSimplified], every (X)HTML resource and the table of contents are
      * converted 繁→简 as they are read; the file itself is never modified.
      */
-    suspend fun openPublication(file: File, toSimplified: Boolean = false): Publication? {
+    suspend fun openPublication(file: File, toSimplified: Boolean = false, translator: ChapterTranslator? = null): Publication? {
         val asset = assetRetriever.retrieve(file.toUrl(isDirectory = false)).getOrElse { return null }
         val converter = if (toSimplified) ChineseConverter.get(context) else null
         return publicationOpener.open(asset, allowUserInteraction = false, onCreatePublication = {
-            if (converter != null) {
+            if (converter != null || translator != null) {
                 container = TransformingContainer(container) { url, resource ->
                     val path = url.toString().substringBefore('?').lowercase()
                     if (path.endsWith(".xhtml") || path.endsWith(".html") || path.endsWith(".htm")) {
-                        resource.map { bytes -> Try.success(converter.htmlToSimplified(bytes.decodeToString()).encodeToByteArray()) }
+                        resource.map { bytes ->
+                            var html = bytes.decodeToString()
+                            if (converter != null) html = converter.htmlToSimplified(html)
+                            // A failed translation (e.g. offline before the model is downloaded) shows the original.
+                            if (translator != null) html = runCatching { translator.translate(path, html) }.getOrDefault(html)
+                            Try.success(html.encodeToByteArray())
+                        }
                     } else {
                         resource
                     }
                 }
+            }
+            if (converter != null) {
                 fun convert(links: List<Link>): List<Link> =
                     links.map { it.copy(title = it.title?.let(converter::toSimplified), children = convert(it.children)) }
                 manifest = manifest.copy(tableOfContents = convert(manifest.tableOfContents))
@@ -237,8 +246,11 @@ class LibraryRepository(
 
     suspend fun touch(id: Long) = dao.touch(id, System.currentTimeMillis())
 
+    fun translationCacheDir(bookId: Long) = File(context.filesDir, "translations/$bookId")
+
     suspend fun delete(book: Book) = withContext(Dispatchers.IO) {
         dao.delete(book.id)
+        translationCacheDir(book.id).deleteRecursively()
         File(book.filePath).delete()
         book.coverPath?.let { File(it).delete() }
     }

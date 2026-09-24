@@ -1,5 +1,6 @@
 package com.qshlab.shelf.data
 
+import androidx.room.AutoMigration
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -39,6 +40,8 @@ data class Book(
     val isTraditional: Boolean = false,
     /** Per-book override of 繁→简 conversion: null = follow the global setting. */
     val convertToSimplified: Boolean? = null,
+    /** TranslationMode name (BILINGUAL / TRANSLATED); null = off. Added in schema v2. */
+    val translationMode: String? = null,
 )
 
 @Dao
@@ -71,7 +74,12 @@ interface BookDao {
     suspend fun delete(id: Long)
 }
 
-@Database(entities = [Book::class], version = 1, exportSchema = true)
+@Database(
+    entities = [Book::class],
+    version = 2,
+    exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
+)
 abstract class ShelfDatabase : RoomDatabase() {
     abstract fun books(): BookDao
 }

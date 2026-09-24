@@ -2,7 +2,11 @@ package com.qshlab.shelf.reader
 
 import com.qshlab.shelf.data.Book
 import com.qshlab.shelf.data.LibraryRepository
+import com.google.mlkit.nl.translate.TranslateLanguage
 import com.qshlab.shelf.settings.SettingsRepository
+import com.qshlab.shelf.translate.ChapterTranslator
+import com.qshlab.shelf.translate.Translation
+import com.qshlab.shelf.translate.TranslationMode
 import java.io.File
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -19,7 +23,22 @@ class ReaderSession(
     val initialLocator: Locator?,
     /** Whether this session shows the book converted 繁→简. */
     val simplified: Boolean,
+    val translation: TranslationMode,
+    /** ML Kit source/target languages used for translation mode. */
+    val translationPair: Pair<String, String>,
 )
+
+/** What the book's own language is, as far as we can tell, and what to translate it into. */
+fun Book.translationPair(): Pair<String, String> {
+    val chineseBook = isTraditional || language?.lowercase()?.startsWith("zh") == true ||
+        (language == null && title.any { it in '\u4e00'..'\u9fff' })
+    val from = if (chineseBook) TranslateLanguage.CHINESE else Translation.languageOf(language) ?: TranslateLanguage.ENGLISH
+    val to = if (from == TranslateLanguage.CHINESE) TranslateLanguage.ENGLISH else TranslateLanguage.CHINESE
+    return from to to
+}
+
+fun Book.translationModeValue(): TranslationMode =
+    translationMode?.let { runCatching { TranslationMode.valueOf(it) }.getOrNull() } ?: TranslationMode.OFF
 
 /** 繁→简 applies when the book says so, else when it's a 繁體 book and the global switch is on. */
 fun Book.showsSimplified(globalDefault: Boolean): Boolean = convertToSimplified ?: (globalDefault && isTraditional)
@@ -40,10 +59,14 @@ class ReaderRepository(private val library: LibraryRepository, private val setti
         val file = File(book.filePath)
         if (!file.exists()) return Result.failure(IllegalStateException("书籍文件丢失"))
         val simplified = book.showsSimplified(settings.reader.first().toSimplified)
-        val publication = library.openPublication(file, toSimplified = simplified)
+        val mode = book.translationModeValue()
+        val pair = book.translationPair()
+        val translator = if (mode == TranslationMode.OFF) null
+        else ChapterTranslator(library.translationCacheDir(book.id), pair.first, pair.second, mode)
+        val publication = library.openPublication(file, toSimplified = simplified, translator = translator)
             ?: return Result.failure(IllegalStateException("无法打开这本书"))
         val locator = book.locator?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() }
-        val session = ReaderSession(book, publication, EpubNavigatorFactory(publication), locator, simplified)
+        val session = ReaderSession(book, publication, EpubNavigatorFactory(publication), locator, simplified, mode, pair)
         sessions[bookId] = session
         library.touch(bookId)
         Result.success(session)

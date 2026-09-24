@@ -1,12 +1,18 @@
 package com.qshlab.shelf.reader
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.ActionMode
 import android.view.KeyEvent
+import android.view.Menu
+import android.view.MenuItem
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +30,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.qshlab.shelf.R
 import com.qshlab.shelf.settings.ReaderSettings
 import com.qshlab.shelf.shelfApp
+import com.qshlab.shelf.translate.Translation
+import com.qshlab.shelf.translate.TranslationMode
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
@@ -48,6 +56,38 @@ class ReaderActivity : FragmentActivity() {
     private var overlayVisible by mutableStateOf(false)
     private var settings by mutableStateOf(ReaderSettings())
     private var locator by mutableStateOf<Locator?>(null)
+    private var lookupText by mutableStateOf<String?>(null)
+
+    /** Adds 查词/翻译 to the text selection menu (copy/share stay). */
+    private val selectionCallback = object : ActionMode.Callback {
+        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
+            menu.add(Menu.NONE, MENU_LOOKUP, 0, "查词/翻译").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            menu.add(Menu.NONE, MENU_COPY, 1, "复制").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            return true
+        }
+
+        override fun onPrepareActionMode(mode: ActionMode, menu: Menu) = false
+
+        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
+            if (item.itemId != MENU_LOOKUP && item.itemId != MENU_COPY) return false
+            val id = item.itemId
+            lifecycleScope.launch {
+                val text = navigator.currentSelection()?.locator?.text?.highlight?.trim()
+                navigator.clearSelection()
+                if (text.isNullOrEmpty()) return@launch
+                if (id == MENU_LOOKUP) {
+                    lookupText = text
+                } else {
+                    (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("text", text))
+                    Toast.makeText(this@ReaderActivity, "已复制", Toast.LENGTH_SHORT).show()
+                }
+            }
+            mode.finish()
+            return true
+        }
+
+        override fun onDestroyActionMode(mode: ActionMode) {}
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         bookId = intent.getLongExtra(EXTRA_BOOK_ID, -1)
@@ -71,6 +111,9 @@ class ReaderActivity : FragmentActivity() {
                     runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url.toString()))) }
                 }
             },
+            configuration = EpubNavigatorFragment.Configuration {
+                selectionActionModeCallback = selectionCallback
+            },
         )
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -92,7 +135,11 @@ class ReaderActivity : FragmentActivity() {
                     isTraditional = session.book.isTraditional,
                     bookSimplified = session.simplified,
                     onBookSimplifiedChange = ::setBookSimplified,
+                    translation = session.translation,
+                    translationLabel = "${Translation.nameOf(session.translationPair.first)} → ${Translation.nameOf(session.translationPair.second)}",
+                    onTranslationChange = ::setTranslation,
                 )
+                lookupText?.let { LookupSheet(it, session.book.language) { lookupText = null } }
             }
         }
         setContentView(
@@ -145,6 +192,25 @@ class ReaderActivity : FragmentActivity() {
         lifecycleScope.launch {
             val book = shelfApp.library.get(bookId) ?: return@launch
             shelfApp.library.update(book.copy(convertToSimplified = on))
+            reload()
+        }
+    }
+
+    private fun setTranslation(mode: TranslationMode) {
+        lifecycleScope.launch {
+            val book = shelfApp.library.get(bookId) ?: return@launch
+            if (mode != TranslationMode.OFF) {
+                val (from, to) = book.translationPair()
+                if (!Translation.isDownloaded(from) || !Translation.isDownloaded(to)) {
+                    Toast.makeText(this@ReaderActivity, "正在下载翻译模型（约 30 MB，只需一次）…", Toast.LENGTH_LONG).show()
+                }
+                val ready = runCatching { Translation.prepare(from, to) }
+                if (ready.isFailure) {
+                    Toast.makeText(this@ReaderActivity, "模型下载失败，请联网后重试", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+            }
+            shelfApp.library.update(book.copy(translationMode = mode.takeIf { it != TranslationMode.OFF }?.name))
             reload()
         }
     }
@@ -216,6 +282,8 @@ class ReaderActivity : FragmentActivity() {
     companion object {
         private const val EXTRA_BOOK_ID = "bookId"
         private const val NAVIGATOR_TAG = "navigator"
+        private const val MENU_LOOKUP = 1001
+        private const val MENU_COPY = 1002
 
         fun intent(context: Context, bookId: Long) =
             Intent(context, ReaderActivity::class.java).putExtra(EXTRA_BOOK_ID, bookId)

@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import com.qshlab.shelf.settings.ReaderFont
 import com.qshlab.shelf.settings.ReaderSettings
 import com.qshlab.shelf.settings.ReaderTheme
+import com.qshlab.shelf.translate.TranslationMode
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import org.readium.r2.shared.publication.Link
@@ -92,6 +93,9 @@ fun ReaderOverlay(
     isTraditional: Boolean,
     bookSimplified: Boolean,
     onBookSimplifiedChange: (Boolean) -> Unit,
+    translation: TranslationMode,
+    translationLabel: String,
+    onTranslationChange: (TranslationMode) -> Unit,
 ) {
     val dark = settings.theme == ReaderTheme.DARK
     val colors = if (dark) darkColorScheme() else lightColorScheme(surface = settings.theme.paper())
@@ -176,7 +180,7 @@ fun ReaderOverlay(
 
         if (sheet == "settings") {
             ModalBottomSheet(onDismissRequest = { sheet = null }) {
-                ReaderSettingsPanel(settings, onSettingsChange, isTraditional, bookSimplified, onBookSimplifiedChange)
+                ReaderSettingsPanel(settings, onSettingsChange, isTraditional, bookSimplified, onBookSimplifiedChange, translation, translationLabel, onTranslationChange)
             }
         }
     }
@@ -189,6 +193,9 @@ private fun ReaderSettingsPanel(
     isTraditional: Boolean,
     bookSimplified: Boolean,
     onBookSimplifiedChange: (Boolean) -> Unit,
+    translation: TranslationMode,
+    translationLabel: String,
+    onTranslationChange: (TranslationMode) -> Unit,
 ) {
     Column(
         Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp),
@@ -199,6 +206,13 @@ private fun ReaderSettingsPanel(
         Label("繁简转换")
         SwitchRow(if (isTraditional) "本书显示为简体（检测到繁体）" else "本书显示为简体", bookSimplified) { onBookSimplifiedChange(it) }
         SwitchRow("繁体书默认显示为简体", s.toSimplified) { onChange(s.copy(toSimplified = it)) }
+
+        Label("整本翻译（$translationLabel，离线）")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TranslationMode.entries.forEach { m ->
+                FilterChip(selected = translation == m, onClick = { if (m != translation) onTranslationChange(m) }, label = { Text(m.label) })
+            }
+        }
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
 
         Label("主题")
