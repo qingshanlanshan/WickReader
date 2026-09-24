@@ -27,7 +27,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -56,6 +59,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.qshlab.shelf.data.Annotation
 import com.qshlab.shelf.settings.ReaderFont
 import com.qshlab.shelf.settings.ReaderSettings
 import com.qshlab.shelf.settings.ReaderTheme
@@ -66,11 +70,6 @@ import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.services.locateProgression
-
-private data class TocEntry(val link: Link, val depth: Int)
-
-private fun flatten(links: List<Link>, depth: Int = 0): List<TocEntry> =
-    links.flatMap { listOf(TocEntry(it, depth)) + flatten(it.children, depth + 1) }
 
 private fun ReaderTheme.paper() = when (this) {
     ReaderTheme.LIGHT -> Color(0xFFFFFFFF)
@@ -98,11 +97,18 @@ fun ReaderOverlay(
     translationLabel: String,
     onTranslationChange: (TranslationMode) -> Unit,
     onReadAloud: () -> Unit,
+    annotations: List<Annotation>,
+    bookmarked: Boolean,
+    onToggleBookmark: () -> Unit,
+    onGoToAnnotation: (Annotation) -> Unit,
+    onDeleteAnnotation: (Annotation) -> Unit,
+    onSearch: suspend (String) -> List<SearchHit>,
+    onGoToSearchHit: (SearchHit) -> Unit,
 ) {
     val dark = settings.theme == ReaderTheme.DARK
     val colors = if (dark) darkColorScheme() else lightColorScheme(surface = settings.theme.paper())
     var sheet by remember { mutableStateOf<String?>(null) }
-    val toc = remember(publication) { flatten(publication.tableOfContents) }
+    val toc = remember(publication) { flattenToc(publication.tableOfContents) }
     val scope = rememberCoroutineScope()
 
     MaterialTheme(colorScheme = colors) {
@@ -119,6 +125,10 @@ fun ReaderOverlay(
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") }
                         Text(title, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
                         IconButton(onClick = onReadAloud) { Icon(Icons.Filled.Headphones, "朗读") }
+                        IconButton(onClick = { sheet = "search" }) { Icon(Icons.Filled.Search, "搜索") }
+                        IconButton(onClick = onToggleBookmark) {
+                            Icon(if (bookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, if (bookmarked) "删除书签" else "添加书签")
+                        }
                         IconButton(onClick = { sheet = "toc" }) { Icon(Icons.AutoMirrored.Filled.List, "目录") }
                         IconButton(onClick = { sheet = "settings" }) { Icon(Icons.Filled.TextFields, "阅读设置") }
                     }
@@ -156,29 +166,19 @@ fun ReaderOverlay(
         }
 
         if (sheet == "toc") {
-            ModalBottomSheet(onDismissRequest = { sheet = null }) {
-                Text("目录", Modifier.padding(horizontal = 20.dp, vertical = 8.dp), style = MaterialTheme.typography.titleMedium)
-                val current = locator?.href?.toString()?.substringBefore('#')
-                val currentIndex = toc.indexOfFirst { it.link.href.toString().substringBefore('#') == current }
-                val listState = rememberLazyListState(initialFirstVisibleItemIndex = maxOf(0, currentIndex - 3))
-                if (toc.isEmpty()) Text("这本书没有目录", Modifier.padding(20.dp))
-                LazyColumn(state = listState, modifier = Modifier.fillMaxWidth()) {
-                    itemsIndexed(toc) { i, entry ->
-                        val isCurrent = i == currentIndex
-                        Text(
-                            entry.link.title ?: entry.link.href.toString(),
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { sheet = null; onGoToLink(entry.link) }
-                                .background(if (isCurrent) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-                                .padding(start = (20 + 16 * entry.depth).dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
-                            fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
+            NavigationSheet(
+                toc = toc,
+                currentHref = locator?.href?.toString()?.substringBefore('#'),
+                annotations = annotations,
+                onGoToLink = { sheet = null; onGoToLink(it) },
+                onGoToAnnotation = { sheet = null; onGoToAnnotation(it) },
+                onDeleteAnnotation = onDeleteAnnotation,
+                onDismiss = { sheet = null },
+            )
+        }
+
+        if (sheet == "search") {
+            SearchSheet(onSearch = onSearch, onGo = { sheet = null; onGoToSearchHit(it) }, onDismiss = { sheet = null })
         }
 
         if (sheet == "settings") {

@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
+import com.qshlab.shelf.data.AnnotationDao
 import com.qshlab.shelf.data.LibraryRepository
 import com.qshlab.shelf.data.ShelfDatabase
 import com.qshlab.shelf.reader.ReaderRepository
@@ -23,6 +24,8 @@ class ShelfApp : Application() {
         private set
     lateinit var settings: SettingsRepository
         private set
+    lateinit var annotations: AnnotationDao
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -37,7 +40,8 @@ class ShelfApp : Application() {
             ),
         )
         val db = Room.databaseBuilder(this, ShelfDatabase::class.java, "shelf.db").build()
-        library = LibraryRepository(this, db.books(), assetRetriever, publicationOpener)
+        annotations = db.annotations()
+        library = LibraryRepository(this, db.books(), assetRetriever, publicationOpener, annotations)
         settings = SettingsRepository(dataStore)
         readers = ReaderRepository(library, settings)
     }

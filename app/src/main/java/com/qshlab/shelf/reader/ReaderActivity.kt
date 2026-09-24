@@ -50,7 +50,12 @@ import org.readium.navigator.media.tts.TtsNavigator
 import org.readium.navigator.media.tts.TtsNavigatorFactory
 import org.readium.navigator.media.tts.android.AndroidTtsEngine
 import org.readium.navigator.media.tts.android.AndroidTtsPreferences
+import org.readium.r2.navigator.DecorableNavigator
 import org.readium.r2.navigator.Decoration
+import org.readium.r2.shared.publication.services.search.search
+import org.json.JSONObject
+import com.qshlab.shelf.data.Annotation
+import com.qshlab.shelf.data.AnnotationType
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.input.InputListener
 import org.readium.r2.navigator.input.TapEvent
@@ -81,24 +86,43 @@ class ReaderActivity : FragmentActivity() {
     private var ttsPlaying by mutableStateOf(false)
     private var ttsVoices by mutableStateOf<List<VoiceOption>>(emptyList())
 
+    // Bookmarks and highlights of this book.
+    private var annotations by mutableStateOf<List<Annotation>>(emptyList())
+    private var editingHighlight by mutableStateOf<Annotation?>(null)
+
     /** Adds 查词/翻译 to the text selection menu (copy/share stay). */
     private val selectionCallback = object : ActionMode.Callback {
         override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
             menu.add(Menu.NONE, MENU_LOOKUP, 0, "查词/翻译").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-            menu.add(Menu.NONE, MENU_COPY, 1, "复制").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            menu.add(Menu.NONE, MENU_HIGHLIGHT, 1, "高亮").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            menu.add(Menu.NONE, MENU_NOTE, 2, "笔记").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            menu.add(Menu.NONE, MENU_COPY, 3, "复制").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
             return true
         }
 
         override fun onPrepareActionMode(mode: ActionMode, menu: Menu) = false
 
         override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
-            if (item.itemId != MENU_LOOKUP && item.itemId != MENU_COPY) return false
+            if (item.itemId !in listOf(MENU_LOOKUP, MENU_COPY, MENU_HIGHLIGHT, MENU_NOTE)) return false
             val id = item.itemId
             lifecycleScope.launch {
-                val text = navigator.currentSelection()?.locator?.text?.highlight?.trim()
+                val selection = navigator.currentSelection()
+                val text = selection?.locator?.text?.highlight?.trim()
                 navigator.clearSelection()
-                if (text.isNullOrEmpty()) return@launch
-                if (id == MENU_LOOKUP) {
+                if (text.isNullOrEmpty() || selection == null) return@launch
+                if (id == MENU_HIGHLIGHT || id == MENU_NOTE) {
+                    val a = Annotation(
+                        bookId = bookId,
+                        type = AnnotationType.HIGHLIGHT,
+                        locator = selection.locator.toJSON().toString(),
+                        text = text,
+                        chapter = selection.locator.title ?: locator?.title,
+                        progress = (selection.locator.locations.totalProgression ?: locator?.locations?.totalProgression ?: 0.0).toFloat(),
+                        createdAt = System.currentTimeMillis(),
+                    )
+                    val newId = shelfApp.annotations.insert(a)
+                    if (id == MENU_NOTE) editingHighlight = a.copy(id = newId)
+                } else if (id == MENU_LOOKUP) {
                     lookupText = text
                 } else {
                     (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("text", text))
@@ -162,7 +186,22 @@ class ReaderActivity : FragmentActivity() {
                     translationLabel = "${Translation.nameOf(session.translationPair.first)} → ${Translation.nameOf(session.translationPair.second)}",
                     onTranslationChange = ::setTranslation,
                     onReadAloud = ::startTts,
+                    annotations = annotations,
+                    bookmarked = currentBookmarks().isNotEmpty(),
+                    onToggleBookmark = ::toggleBookmark,
+                    onGoToAnnotation = { a -> Locator.fromJSON(JSONObject(a.locator))?.let { navigator.go(it, animated = false) } },
+                    onDeleteAnnotation = { a -> lifecycleScope.launch { shelfApp.annotations.delete(a.id) } },
+                    onSearch = ::search,
+                    onGoToSearchHit = ::goToSearchHit,
                 )
+                editingHighlight?.let { a ->
+                    HighlightSheet(
+                        a,
+                        onSave = { updated -> lifecycleScope.launch { shelfApp.annotations.update(updated) }; editingHighlight = null },
+                        onDelete = { lifecycleScope.launch { shelfApp.annotations.delete(a.id) }; editingHighlight = null },
+                        onDismiss = { editingHighlight = null },
+                    )
+                }
                 lookupText?.let { LookupSheet(it, session.book.language) { lookupText = null } }
                 if (ttsActive) {
                     androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.BottomCenter) {
@@ -204,8 +243,28 @@ class ReaderActivity : FragmentActivity() {
             }
         })
 
+        navigator.addDecorationListener("highlights", object : DecorableNavigator.Listener {
+            override fun onDecorationActivated(event: DecorableNavigator.OnActivatedEvent): Boolean {
+                val id = event.decoration.id.removePrefix("h").toLongOrNull() ?: return false
+                editingHighlight = annotations.firstOrNull { it.id == id } ?: return false
+                return true
+            }
+        })
+
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    shelfApp.annotations.observe(bookId).collect { list ->
+                        annotations = list
+                        navigator.applyDecorations(
+                            list.filter { it.type == AnnotationType.HIGHLIGHT }.mapNotNull { a ->
+                                val loc = runCatching { Locator.fromJSON(JSONObject(a.locator)) }.getOrNull() ?: return@mapNotNull null
+                                Decoration("h${a.id}", loc, Decoration.Style.Highlight(tint = a.color))
+                            },
+                            "highlights",
+                        )
+                    }
+                }
                 launch {
                     shelfApp.settings.reader.collect { s ->
                         settings = s
@@ -233,6 +292,70 @@ class ReaderActivity : FragmentActivity() {
             val book = shelfApp.library.get(bookId) ?: return@launch
             shelfApp.library.update(book.copy(convertToSimplified = on))
             reload()
+        }
+    }
+
+    /** Bookmarks on the page being shown (same chapter, within a position or so). */
+    private fun currentBookmarks(): List<Annotation> {
+        val here = locator ?: return emptyList()
+        val href = here.href.toString().substringBefore('#')
+        return annotations.filter { a ->
+            if (a.type != AnnotationType.BOOKMARK) return@filter false
+            val l = runCatching { Locator.fromJSON(JSONObject(a.locator)) }.getOrNull() ?: return@filter false
+            if (l.href.toString().substringBefore('#') != href) return@filter false
+            val p1 = l.locations.position
+            val p2 = here.locations.position
+            if (p1 != null && p2 != null) kotlin.math.abs(p1 - p2) <= 1
+            else kotlin.math.abs((l.locations.progression ?: 0.0) - (here.locations.progression ?: 0.0)) < 0.01
+        }
+    }
+
+    private fun toggleBookmark() {
+        val existing = currentBookmarks()
+        lifecycleScope.launch {
+            if (existing.isNotEmpty()) {
+                existing.forEach { shelfApp.annotations.delete(it.id) }
+                Toast.makeText(this@ReaderActivity, "已删除书签", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            val here = navigator.currentLocator.value
+            val snippet = navigator.firstVisibleElementLocator()?.text?.highlight?.trim()?.take(80)
+            shelfApp.annotations.insert(
+                Annotation(
+                    bookId = bookId,
+                    type = AnnotationType.BOOKMARK,
+                    locator = here.toJSON().toString(),
+                    text = snippet ?: here.title ?: "书签",
+                    chapter = here.title,
+                    progress = (here.locations.totalProgression ?: 0.0).toFloat(),
+                    createdAt = System.currentTimeMillis(),
+                )
+            )
+            Toast.makeText(this@ReaderActivity, "已添加书签", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private suspend fun search(query: String): List<SearchHit> {
+        val iterator = session.publication.search(query) ?: return emptyList()
+        val hits = mutableListOf<SearchHit>()
+        try {
+            while (hits.size < 300) {
+                val page = iterator.next().getOrNull() ?: break
+                page.locators.forEach { l ->
+                    hits += SearchHit(l.title, l.text.before.orEmpty(), l.text.highlight.orEmpty(), l.text.after.orEmpty(), l)
+                }
+            }
+        } finally {
+            iterator.close()
+        }
+        return hits.take(300)
+    }
+
+    private fun goToSearchHit(hit: SearchHit) {
+        setOverlay(false)
+        navigator.go(hit.locator, animated = false)
+        lifecycleScope.launch {
+            navigator.applyDecorations(listOf(Decoration("search", hit.locator, Decoration.Style.Underline(tint = Color.rgb(255, 140, 0)))), "search")
         }
     }
 
@@ -433,6 +556,8 @@ class ReaderActivity : FragmentActivity() {
         private const val NAVIGATOR_TAG = "navigator"
         private const val MENU_LOOKUP = 1001
         private const val MENU_COPY = 1002
+        private const val MENU_HIGHLIGHT = 1003
+        private const val MENU_NOTE = 1004
 
         fun intent(context: Context, bookId: Long) =
             Intent(context, ReaderActivity::class.java).putExtra(EXTRA_BOOK_ID, bookId)

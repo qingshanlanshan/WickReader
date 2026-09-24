@@ -4,6 +4,7 @@ import androidx.room.AutoMigration
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
@@ -74,12 +75,51 @@ interface BookDao {
     suspend fun delete(id: Long)
 }
 
+enum class AnnotationType { BOOKMARK, HIGHLIGHT }
+
+/** A bookmark, or a highlight (optionally with a note). Added in schema v3. */
+@Entity(tableName = "annotations", indices = [Index("bookId")])
+data class Annotation(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val bookId: Long,
+    val type: AnnotationType,
+    /** Readium locator JSON (for highlights it covers the selected text). */
+    val locator: String,
+    /** Selected text, or a snippet of the page for bookmarks. */
+    val text: String,
+    val chapter: String?,
+    val note: String? = null,
+    /** ARGB highlight color. */
+    val color: Int = 0xFFFFD666.toInt(),
+    val progress: Float,
+    val createdAt: Long,
+)
+
+@Dao
+interface AnnotationDao {
+    @Query("SELECT * FROM annotations WHERE bookId = :bookId ORDER BY progress, createdAt")
+    fun observe(bookId: Long): Flow<List<Annotation>>
+
+    @Insert
+    suspend fun insert(a: Annotation): Long
+
+    @Update
+    suspend fun update(a: Annotation)
+
+    @Query("DELETE FROM annotations WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("DELETE FROM annotations WHERE bookId = :bookId")
+    suspend fun deleteForBook(bookId: Long)
+}
+
 @Database(
-    entities = [Book::class],
-    version = 2,
+    entities = [Book::class, Annotation::class],
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 abstract class ShelfDatabase : RoomDatabase() {
     abstract fun books(): BookDao
+    abstract fun annotations(): AnnotationDao
 }

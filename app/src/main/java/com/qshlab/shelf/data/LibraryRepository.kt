@@ -40,6 +40,7 @@ class LibraryRepository(
     private val dao: BookDao,
     private val assetRetriever: AssetRetriever,
     private val publicationOpener: PublicationOpener,
+    private val annotations: AnnotationDao,
 ) {
     private val booksDir = File(context.filesDir, "books").apply { mkdirs() }
     private val coversDir = File(context.filesDir, "covers").apply { mkdirs() }
@@ -250,6 +251,7 @@ class LibraryRepository(
 
     suspend fun delete(book: Book) = withContext(Dispatchers.IO) {
         dao.delete(book.id)
+        annotations.deleteForBook(book.id)
         translationCacheDir(book.id).deleteRecursively()
         File(book.filePath).delete()
         book.coverPath?.let { File(it).delete() }
