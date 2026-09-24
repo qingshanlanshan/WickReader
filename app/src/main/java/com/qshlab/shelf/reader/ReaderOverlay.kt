@@ -27,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -96,6 +97,7 @@ fun ReaderOverlay(
     translation: TranslationMode,
     translationLabel: String,
     onTranslationChange: (TranslationMode) -> Unit,
+    onReadAloud: () -> Unit,
 ) {
     val dark = settings.theme == ReaderTheme.DARK
     val colors = if (dark) darkColorScheme() else lightColorScheme(surface = settings.theme.paper())
@@ -116,6 +118,7 @@ fun ReaderOverlay(
                     ) {
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") }
                         Text(title, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
+                        IconButton(onClick = onReadAloud) { Icon(Icons.Filled.Headphones, "朗读") }
                         IconButton(onClick = { sheet = "toc" }) { Icon(Icons.AutoMirrored.Filled.List, "目录") }
                         IconButton(onClick = { sheet = "settings" }) { Icon(Icons.Filled.TextFields, "阅读设置") }
                     }

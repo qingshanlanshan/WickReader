@@ -53,6 +53,9 @@ data class ReaderSettings(
     val volumeKeysTurnPages: Boolean = true,
     /** Readium lays out zh-TW / ja books vertically by default; most readers expect horizontal. */
     val verticalText: Boolean = false,
+    val ttsSpeed: Double = 1.0,
+    /** Chosen TTS voice id per language code, e.g. "zh" -> "cmn-cn-x-ccc-local". */
+    val ttsVoices: Map<String, String> = emptyMap(),
 )
 
 class SettingsRepository(private val store: DataStore<Preferences>) {
@@ -72,6 +75,8 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
         val toSimplified = booleanPreferencesKey("reader.toSimplified")
         val volumeKeys = booleanPreferencesKey("reader.volumeKeys")
         val verticalText = booleanPreferencesKey("reader.verticalText")
+        val ttsSpeed = doublePreferencesKey("reader.ttsSpeed")
+        val ttsVoices = stringPreferencesKey("reader.ttsVoices")
     }
 
     private inline fun <reified E : Enum<E>> Preferences.enum(key: Preferences.Key<String>, default: E): E =
@@ -100,6 +105,8 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
             toSimplified = p[K.toSimplified] ?: d.toSimplified,
             volumeKeysTurnPages = p[K.volumeKeys] ?: d.volumeKeysTurnPages,
             verticalText = p[K.verticalText] ?: d.verticalText,
+            ttsSpeed = p[K.ttsSpeed] ?: d.ttsSpeed,
+            ttsVoices = p[K.ttsVoices]?.split('\n')?.mapNotNull { l -> l.split('=', limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] } }?.toMap() ?: d.ttsVoices,
         )
     }
 
@@ -121,5 +128,7 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
         p[K.toSimplified] = s.toSimplified
         p[K.volumeKeys] = s.volumeKeysTurnPages
         p[K.verticalText] = s.verticalText
+        p[K.ttsSpeed] = s.ttsSpeed
+        p[K.ttsVoices] = s.ttsVoices.entries.joinToString("\n") { "${it.key}=${it.value}" }
     }
 }
