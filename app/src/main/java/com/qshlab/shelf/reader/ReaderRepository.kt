@@ -42,12 +42,18 @@ class ReaderSession(
     val navigatorFactory: EpubNavigatorFactory get() = epubFactory ?: error("not an EPUB session")
 }
 
-/** What the book's own language is, as far as we can tell, and what to translate it into. */
+/** The book's own language as an ML Kit code (Chinese, Japanese, English, …). */
+fun Book.translationSource(): String = when (languageKey()) {
+    "zh", "zh-Hant" -> TranslateLanguage.CHINESE
+    "ja" -> TranslateLanguage.JAPANESE
+    null -> TranslateLanguage.ENGLISH
+    else -> Translation.languageOf(language) ?: TranslateLanguage.ENGLISH
+}
+
+/** Source and target for this book: the user's chosen target, else the default for its language. */
 fun Book.translationPair(): Pair<String, String> {
-    val chineseBook = isTraditional || language?.lowercase()?.startsWith("zh") == true ||
-        (language == null && title.any { it in '\u4e00'..'\u9fff' })
-    val from = if (chineseBook) TranslateLanguage.CHINESE else Translation.languageOf(language) ?: TranslateLanguage.ENGLISH
-    val to = if (from == TranslateLanguage.CHINESE) TranslateLanguage.ENGLISH else TranslateLanguage.CHINESE
+    val from = translationSource()
+    val to = translationTarget?.takeIf { it != from } ?: Translation.defaultTarget(from)
     return from to to
 }
 

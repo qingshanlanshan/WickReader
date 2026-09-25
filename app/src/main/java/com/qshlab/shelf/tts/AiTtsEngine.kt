@@ -149,6 +149,8 @@ class AiTtsEngine(
     /** A sentence to synthesize, keyed by voice, speed and text. */
     private inner class Job(text: String, language: String?) {
         val lang = language ?: bookLanguage
+        /** Another language with no AI voice (e.g. a Japanese translation line in a Chinese book): skipped. */
+        val skip = lang != bookLanguage && pick(lang) == null
         val voice = pick(lang) ?: pick(bookLanguage)
         val speed = settings.value.speed.toFloat()
         val spoken = if (lang == "zh") converter.toSimplified(text) else text
@@ -250,7 +252,7 @@ class AiTtsEngine(
                 first = false
                 for (seg in sentences.drop(start)) {
                     if (enough()) break
-                    next += Job(seg.text, baseLanguage(seg.language?.code))
+                    Job(seg.text, baseLanguage(seg.language?.code)).takeIf { !it.skip }?.let { next += it }
                 }
             }
             synchronized(lock) { upcoming = next }
@@ -265,6 +267,10 @@ class AiTtsEngine(
         current?.cancel()
         currentId = requestId
         val job = Job(text, baseLanguage(language?.code))
+        if (job.skip) {
+            notify { onDone(requestId) }
+            return
+        }
         if (job.voice == null) {
             notify { onError(requestId, AiTtsError.NoVoice(job.lang)) }
             return

@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -50,14 +51,15 @@ private fun textApps(context: Context): List<TextApp> {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun LookupSheet(text: String, bookLanguage: String?, onDismiss: () -> Unit) {
+fun LookupSheet(text: String, bookSource: String, target: String, onTargetChange: (String) -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val (from, to) = remember(text) { Translation.pairFor(text, bookLanguage) }
-    var result by remember(text) { mutableStateOf<String?>(null) }
-    var status by remember(text) { mutableStateOf("翻译中…") }
+    val from = remember(text) { Translation.sourceOf(text, bookSource) }
+    val to = target.takeIf { it != from } ?: Translation.defaultTarget(from)
+    var result by remember(text, to) { mutableStateOf<String?>(null) }
+    var status by remember(text, to) { mutableStateOf("翻译中…") }
     val apps = remember { textApps(context) }
 
-    LaunchedEffect(text) {
+    LaunchedEffect(text, to) {
         if (!Translation.isDownloaded(from) || !Translation.isDownloaded(to)) status = "首次使用：正在下载${Translation.nameOf(from)}→${Translation.nameOf(to)}翻译模型（约 30 MB，只需一次）…"
         result = runCatching { Translation.translate(text, from, to) }
             .getOrElse { status = "翻译失败：${it.message ?: "请检查网络后重试（首次需下载模型）"}"; null }
@@ -76,7 +78,12 @@ fun LookupSheet(text: String, bookLanguage: String?, onDismiss: () -> Unit) {
                 )
             }
             HorizontalDivider()
-            Text("${Translation.nameOf(from)} → ${Translation.nameOf(to)}（离线翻译）", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("${Translation.nameOf(from)} 译成", Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Translation.TARGETS.filter { it != from }.forEach { lang ->
+                    FilterChip(selected = lang == to, onClick = { if (lang != to) onTargetChange(lang) }, label = { Text(Translation.nameOf(lang)) })
+                }
+            }
             if (result != null) {
                 SelectionContainer {
                     Text(result!!, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState()))

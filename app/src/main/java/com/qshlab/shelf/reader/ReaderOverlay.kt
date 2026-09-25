@@ -83,6 +83,7 @@ import com.qshlab.shelf.data.Annotation
 import com.qshlab.shelf.settings.ReaderFont
 import com.qshlab.shelf.settings.ReaderSettings
 import com.qshlab.shelf.settings.ReaderTheme
+import com.qshlab.shelf.translate.Translation
 import com.qshlab.shelf.translate.TranslationMode
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
@@ -114,8 +115,9 @@ fun ReaderOverlay(
     bookSimplified: Boolean,
     onBookSimplifiedChange: (Boolean) -> Unit,
     translation: TranslationMode,
-    translationLabel: String,
+    translationPair: Pair<String, String>,
     onTranslationChange: (TranslationMode) -> Unit,
+    onTranslationTargetChange: (String) -> Unit,
     onReadAloud: () -> Unit,
     annotations: List<Annotation>,
     bookmarked: Boolean,
@@ -129,6 +131,8 @@ fun ReaderOverlay(
     onLayoutChange: (PageLayout) -> Unit,
     settingsOpen: Boolean,
     onSettingsOpenChange: (Boolean) -> Unit,
+    /** Readium "pages" (positions) in the book, once counted. */
+    pageCount: Int?,
 ) {
     val dark = settings.theme == ReaderTheme.DARK
     val colors = if (dark) darkColorScheme() else lightColorScheme(surface = settings.theme.paper())
@@ -172,7 +176,11 @@ fun ReaderOverlay(
                         var dragging by remember { mutableStateOf<Float?>(null) }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(locator?.title ?: "", Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
-                            Text("${((dragging ?: progress) * 100).roundToInt()}%", style = MaterialTheme.typography.bodySmall)
+                            val page = if (pageCount != null && pageCount > 0) {
+                                val p = dragging?.let { (it * (pageCount - 1)).roundToInt() + 1 } ?: locator?.locations?.position
+                                p?.let { "第 ${it.coerceIn(1, pageCount)} / $pageCount 页 · " }
+                            } else null
+                            Text((page ?: "") + "${((dragging ?: progress) * 100).roundToInt()}%", style = MaterialTheme.typography.bodySmall)
                         }
                         // With the next page on the left, the book runs right-to-left along the slider too.
                         CompositionLocalProvider(LocalLayoutDirection provides if (layout == PageLayout.HORIZONTAL_LTR) LayoutDirection.Ltr else LayoutDirection.Rtl) {
@@ -204,7 +212,7 @@ fun ReaderOverlay(
                     Surface(Modifier.width(width).fillMaxHeight(), tonalElevation = 2.dp, shadowElevation = 8.dp) {
                         ReaderSettingsPanel(
                             settings, onSettingsChange, isTraditional, bookSimplified, onBookSimplifiedChange,
-                            translation, translationLabel, onTranslationChange, layout, layoutChoices, onLayoutChange,
+                            translation, translationPair, onTranslationChange, onTranslationTargetChange, layout, layoutChoices, onLayoutChange,
                             onClose = { onSettingsOpenChange(false) },
                         )
                     }
@@ -240,8 +248,9 @@ private fun ReaderSettingsPanel(
     bookSimplified: Boolean,
     onBookSimplifiedChange: (Boolean) -> Unit,
     translation: TranslationMode,
-    translationLabel: String,
+    translationPair: Pair<String, String>,
     onTranslationChange: (TranslationMode) -> Unit,
+    onTranslationTargetChange: (String) -> Unit,
     layout: PageLayout,
     layoutChoices: List<PageLayout>,
     onLayoutChange: (PageLayout) -> Unit,
@@ -301,7 +310,14 @@ private fun ReaderSettingsPanel(
         SwitchRow(if (isTraditional) "本书显示为简体（检测到繁体）" else "本书显示为简体", bookSimplified) { onBookSimplifiedChange(it) }
         SwitchRow("繁体书默认显示为简体", s.toSimplified) { onChange(s.copy(toSimplified = it)) }
 
-        Label("整本翻译（$translationLabel，离线）")
+        Label("整本翻译（离线）")
+        val (from, to) = translationPair
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.Center) {
+            Text("${Translation.nameOf(from)} 译成", Modifier.align(Alignment.CenterVertically).padding(end = 2.dp), style = MaterialTheme.typography.bodyMedium)
+            Translation.TARGETS.filter { it != from }.forEach { lang ->
+                FilterChip(selected = to == lang, onClick = { if (lang != to) onTranslationTargetChange(lang) }, label = { Text(Translation.nameOf(lang)) })
+            }
+        }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             TranslationMode.entries.forEach { m ->
                 FilterChip(selected = translation == m, onClick = { if (m != translation) onTranslationChange(m) }, label = { Text(m.label) })

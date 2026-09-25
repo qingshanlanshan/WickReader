@@ -25,7 +25,8 @@ import: TXT / MD (UTF-8/16, GB18030/GBK, Big5; chapters detected), FB2 / FB2.ZIP
 listed by the scan but not opened yet
 
 **Reading**
-- Paginated or scrolling; themes (日间 / 护眼 / 夜间), 黑体 / 宋体 / the book's font, size, line height,
+- Progress as 第 123 / 500 页 · 25% (Readium positions: fixed ~1 KB pages, so the count doesn't change
+  with font size); paginated or scrolling; themes (日间 / 护眼 / 夜间), 黑体 / 宋体 / the book's font, size, line height,
   margins; volume keys turn pages (except while reading aloud)
 - Books look alike: bold body text, odd sizes, letter spacing and heading fonts from the book's CSS are
   evened out (unless 使用书籍自带排版 is on)
@@ -36,12 +37,13 @@ listed by the scan but not opened yet
 - 目录 · 书签 · 笔记 (highlights with notes and colors), search inside the book
 - 繁→简 per book or for all 繁體 books (OpenCC dictionaries; detected automatically)
 - Select text → 查词/翻译 (offline ML Kit translation + any installed dictionary app), 高亮, 笔记, 复制
-- 整本翻译: 双语对照 or 仅译文, English/other ↔ 中文, on-device, cached per chapter
+- 整本翻译: 双语对照 or 仅译文 into 中文 / English / 日本語 (chosen per book, also used by 查词/翻译),
+  on-device, cached per chapter; read-aloud skips translation lines it has no voice for
 - 朗读 with on-device AI voices (sherpa-onnx): Kokoro 中英文 (full-precision model, 100 voices, ~406 MB
   from Hugging Face), 标贝女声 (Matcha, very fast, ~131 MB), Amy English (21 MB); the phone's TTS engine
   for other languages. Whole sentences are synthesized ahead of playback (a lookahead walks the book
   with Readium's tokenizer), so there are no gaps or mid-sentence stalls once reading has started.
-  Sentence highlighting, speed, voice choice with preview, screen-off playback, lock-screen controls
+  Sentence highlighting, speed 0.5×–3×, voice choice with preview, screen-off playback, lock-screen controls
 
 ## Install on your phone
 

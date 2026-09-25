@@ -49,6 +49,8 @@ data class Book(
     /** Marked 想读 by the user. Schema v4. */
     @ColumnInfo(defaultValue = "0")
     val wantToRead: Boolean = false,
+    /** ML Kit language to translate this book into ("zh", "en", "ja"); null = automatic. Schema v5. */
+    val translationTarget: String? = null,
 ) {
     val started: Boolean get() = lastOpenedAt != null && progress > 0.001f
 }
@@ -145,9 +147,9 @@ interface AnnotationDao {
 
 @Database(
     entities = [Book::class, Annotation::class],
-    version = 4,
+    version = 5,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4), AutoMigration(from = 4, to = 5)],
 )
 abstract class ShelfDatabase : RoomDatabase() {
     abstract fun books(): BookDao

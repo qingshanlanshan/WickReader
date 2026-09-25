@@ -20,7 +20,7 @@ class ChapterTranslator(
     private val tag = Regex("<[^>]+>")
 
     private fun cacheFile(key: String): File {
-        val hash = MessageDigest.getInstance("SHA-1").digest("$key|$from|$to|$mode|v1".toByteArray()).joinToString("") { "%02x".format(it) }
+        val hash = MessageDigest.getInstance("SHA-1").digest("$key|$from|$to|$mode|v2".toByteArray()).joinToString("") { "%02x".format(it) }
         return File(cacheDir, "$hash.html")
     }
 
@@ -44,12 +44,16 @@ class ChapterTranslator(
                 continue
             }
             val translated = esc(Translation.translate(plain, from, to))
+            // Marked with its language, so read-aloud knows which voice (if any) should read it.
+            val lang = """ lang="$to" xml:lang="$to""""
             when (mode) {
                 TranslationMode.BILINGUAL -> {
                     out.append(m.value)
-                    out.append("<$name$attrs class=\"shelf-translation\" style=\"opacity:0.72;font-size:0.94em;margin-top:0.2em\">$translated</$name>")
+                    // A copy of the paragraph's attributes without id / class / style / lang (no duplicates).
+                    val copied = attrs.replace(Regex("\\s(id|class|style|lang|xml:lang)\\s*=\\s*(\"[^\"]*\"|'[^']*')"), "")
+                    out.append("<$name$copied$lang class=\"shelf-translation\" style=\"opacity:0.72;font-size:0.94em;margin-top:0.2em\">$translated</$name>")
                 }
-                else -> out.append("<$name$attrs>$translated</$name>")
+                else -> out.append("<$name${attrs.replace(Regex("\\s(lang|xml:lang)\\s*=\\s*(\"[^\"]*\"|'[^']*')"), "")}$lang>$translated</$name>")
             }
         }
         out.append(html, last, html.length)

@@ -35,16 +35,28 @@ object Translation {
         return TranslateLanguage.fromLanguageTag(base)
     }
 
+    /** Languages offered as translation targets. */
+    val TARGETS = listOf(TranslateLanguage.CHINESE, TranslateLanguage.ENGLISH, TranslateLanguage.JAPANESE)
+
+    /** The default target for a source language: Chinese → English, anything else → Chinese. */
+    fun defaultTarget(source: String) = if (source == TranslateLanguage.CHINESE) TranslateLanguage.ENGLISH else TranslateLanguage.CHINESE
+
+    fun hasKana(text: String) = text.any { it.code in 0x3040..0x30ff }
+
     fun looksChinese(text: String): Boolean {
         val letters = text.count { it.isLetter() }
         return letters > 0 && text.count { it in '一'..'鿿' } * 2 >= letters
     }
 
-    /** Source/target for a selection: Chinese text → English, anything else → Chinese. */
-    fun pairFor(text: String, bookLanguage: String?): Pair<String, String> {
-        if (looksChinese(text)) return TranslateLanguage.CHINESE to TranslateLanguage.ENGLISH
-        val src = languageOf(bookLanguage)?.takeIf { it != TranslateLanguage.CHINESE } ?: TranslateLanguage.ENGLISH
-        return src to TranslateLanguage.CHINESE
+    /**
+     * The language of a selection: kana means Japanese; mostly Han characters means Chinese
+     * (or Japanese in a Japanese book); otherwise the book's language, else English.
+     */
+    fun sourceOf(text: String, bookSource: String): String = when {
+        hasKana(text) -> TranslateLanguage.JAPANESE
+        looksChinese(text) -> if (bookSource == TranslateLanguage.JAPANESE) TranslateLanguage.JAPANESE else TranslateLanguage.CHINESE
+        bookSource != TranslateLanguage.CHINESE && bookSource != TranslateLanguage.JAPANESE -> bookSource
+        else -> TranslateLanguage.ENGLISH
     }
 
     suspend fun isDownloaded(lang: String): Boolean =
@@ -69,8 +81,8 @@ object Translation {
 
     val displayNames = mapOf(
         TranslateLanguage.CHINESE to "中文",
-        TranslateLanguage.ENGLISH to "英语",
-        TranslateLanguage.JAPANESE to "日语",
+        TranslateLanguage.ENGLISH to "英文",
+        TranslateLanguage.JAPANESE to "日文",
         TranslateLanguage.KOREAN to "韩语",
         TranslateLanguage.FRENCH to "法语",
         TranslateLanguage.GERMAN to "德语",

@@ -59,6 +59,7 @@ import org.readium.navigator.media.tts.android.AndroidTtsEngine
 import org.readium.navigator.media.tts.android.AndroidTtsPreferences
 import org.readium.r2.navigator.DecorableNavigator
 import org.readium.r2.navigator.Decoration
+import org.readium.r2.shared.publication.services.positions
 import org.readium.r2.shared.publication.services.search.search
 import org.json.JSONObject
 import com.qshlab.shelf.data.Annotation
@@ -85,6 +86,9 @@ class ReaderActivity : FragmentActivity() {
     private var settings by mutableStateOf(ReaderSettings())
     private var locator by mutableStateOf<Locator?>(null)
     private var lookupText by mutableStateOf<String?>(null)
+    /** Target chosen in the lookup sheet (saved for the book; no reload needed). */
+    private var lookupTarget by mutableStateOf<String?>(null)
+    private var pageCount by mutableStateOf<Int?>(null)
 
     private var layout by mutableStateOf(PageLayout.HORIZONTAL_LTR)
     private var settingsOpen by mutableStateOf(false)
@@ -206,8 +210,9 @@ class ReaderActivity : FragmentActivity() {
                     bookSimplified = session.simplified,
                     onBookSimplifiedChange = ::setBookSimplified,
                     translation = session.translation,
-                    translationLabel = "${Translation.nameOf(session.translationPair.first)} → ${Translation.nameOf(session.translationPair.second)}",
-                    onTranslationChange = ::setTranslation,
+                    translationPair = session.translationPair.first to (lookupTarget ?: session.translationPair.second),
+                    onTranslationChange = { setTranslation(it, lookupTarget ?: session.translationPair.second) },
+                    onTranslationTargetChange = { setTranslation(session.translation, it) },
                     onReadAloud = ::startTts,
                     annotations = annotations,
                     bookmarked = currentBookmarks().isNotEmpty(),
@@ -221,6 +226,7 @@ class ReaderActivity : FragmentActivity() {
                     onLayoutChange = ::changeLayout,
                     settingsOpen = settingsOpen,
                     onSettingsOpenChange = { settingsOpen = it; if (it) setOverlay(false) },
+                    pageCount = pageCount,
                 )
                 editingHighlight?.let { a ->
                     HighlightSheet(
@@ -230,7 +236,14 @@ class ReaderActivity : FragmentActivity() {
                         onDismiss = { editingHighlight = null },
                     )
                 }
-                lookupText?.let { LookupSheet(it, session.book.language) { lookupText = null } }
+                lookupText?.let {
+                    LookupSheet(
+                        it,
+                        bookSource = session.translationPair.first,
+                        target = lookupTarget ?: session.translationPair.second,
+                        onTargetChange = ::chooseLookupTarget,
+                    ) { lookupText = null }
+                }
                 if (ttsActive) {
                     androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.BottomCenter) {
                         TtsBar(
@@ -327,6 +340,9 @@ class ReaderActivity : FragmentActivity() {
                 }
                 launch {
                     navigator.currentLocator.collect { locator = it }
+                }
+                launch {
+                    if (pageCount == null) pageCount = runCatching { session.publication.positions().size }.getOrNull()
                 }
                 launch {
                     navigator.currentLocator.debounce(800).collect { saveProgress(it) }
@@ -625,13 +641,15 @@ class ReaderActivity : FragmentActivity() {
         }
     }
 
-    private fun setTranslation(mode: TranslationMode) {
+    /** Whole-book translation: [mode] into [target]; reopens the book when something changed. */
+    private fun setTranslation(mode: TranslationMode, target: String) {
         lifecycleScope.launch {
             val book = shelfApp.library.get(bookId) ?: return@launch
+            val updated = book.copy(translationMode = mode.takeIf { it != TranslationMode.OFF }?.name, translationTarget = target)
             if (mode != TranslationMode.OFF) {
-                val (from, to) = book.translationPair()
+                val (from, to) = updated.translationPair()
                 if (!Translation.isDownloaded(from) || !Translation.isDownloaded(to)) {
-                    Toast.makeText(this@ReaderActivity, "正在下载翻译模型（约 30 MB，只需一次）…", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@ReaderActivity, "正在下载翻译模型（每种语言约 30 MB，只需一次）…", Toast.LENGTH_LONG).show()
                 }
                 val ready = runCatching { Translation.prepare(from, to) }
                 if (ready.isFailure) {
@@ -639,8 +657,21 @@ class ReaderActivity : FragmentActivity() {
                     return@launch
                 }
             }
-            shelfApp.library.update(book.copy(translationMode = mode.takeIf { it != TranslationMode.OFF }?.name))
+            shelfApp.library.update(updated)
+            // Only the target changed while translation is off: nothing on the page changes.
+            if (mode == TranslationMode.OFF && session.translation == TranslationMode.OFF) {
+                lookupTarget = target
+                return@launch
+            }
             reload()
+        }
+    }
+
+    private fun chooseLookupTarget(target: String) {
+        lookupTarget = target
+        lifecycleScope.launch {
+            val book = shelfApp.library.get(bookId) ?: return@launch
+            shelfApp.library.update(book.copy(translationTarget = target))
         }
     }
 
