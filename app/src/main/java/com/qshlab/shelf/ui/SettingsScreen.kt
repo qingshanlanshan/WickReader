@@ -101,6 +101,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val installed by app.voices.installed.collectAsState()
     val downloads by app.voices.downloads.collectAsState()
     var picking by remember { mutableStateOf<String?>(null) }
+    var sponsoring by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf<VoiceModel?>(null) }
     var storageVersion by remember { mutableStateOf(0) }
     var pickingLanguage by remember { mutableStateOf(false) }
@@ -214,6 +215,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             }
 
             item { Section(stringResource(R.string.set_section_about)) }
+            item { SettingRow(stringResource(R.string.sponsor_menu), stringResource(R.string.sponsor_settings_summary)) { sponsoring = true } }
             item {
                 val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() }
                 Text(
@@ -225,6 +227,8 @@ fun SettingsScreen(onBack: () -> Unit) {
             }
         }
     }
+
+    if (sponsoring) SponsorDialog { sponsoring = false }
 
     picking?.let { lang ->
         val models = VoiceCatalog.models.filter { it.id in installed && lang in it.languages }

@@ -49,10 +49,20 @@ private const val HORIZONTAL_CSS = "<style type=\"text/css\" id=\"shelf-horizont
     "html,body{writing-mode:horizontal-tb!important;-webkit-writing-mode:horizontal-tb!important;-epub-writing-mode:horizontal-tb!important}" +
     "</style>"
 
+/**
+ * Vertical text: Readium caps the column height at its horizontal line length (40rem), which
+ * leaves the bottom of a phone screen empty. Let columns use the full height.
+ */
+private const val VERTICAL_CSS = "<style type=\"text/css\" id=\"shelf-vertical\">" +
+    ":root{--RS__maxLineLength:100vh!important}" +
+    // Readium also sets it on body in scroll mode (`:root[style*=readium-scroll-on] body`), so be more specific.
+    ":root:root[style] body{--RS__maxLineLength:100vh!important}" +
+    "</style>"
+
 internal fun injectStyle(html: String, layout: PageLayout = PageLayout.HORIZONTAL_LTR): String {
     val head = html.indexOf("</head>", ignoreCase = true)
     if (head < 0) return html
-    val extra = if (layout == PageLayout.VERTICAL_RTL) "" else HORIZONTAL_CSS
+    val extra = if (layout == PageLayout.VERTICAL_RTL) VERTICAL_CSS else HORIZONTAL_CSS
     return html.substring(0, head) + NORMALIZE_CSS + extra + html.substring(head)
 }
 

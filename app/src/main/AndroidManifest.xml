@@ -17,6 +17,8 @@
 
     <!-- To list installed dictionary / translation apps for selected text. -->
     <queries>
+        <!-- To offer "open WeChat" after saving the tip code. -->
+        <package android:name="com.tencent.mm" />
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />

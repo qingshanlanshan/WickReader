@@ -106,6 +106,7 @@ fun LibraryScreen(
     var selection by remember { mutableStateOf<Set<Long>?>(null) }
     var seriesDialogFor by remember { mutableStateOf<List<Book>?>(null) }
     var confirmDelete by remember { mutableStateOf<Set<Long>?>(null) }
+    var sponsoring by remember { mutableStateOf(false) }
     val s = state.settings
 
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
@@ -194,6 +195,8 @@ fun LibraryScreen(
                                 HorizontalDivider()
                                 DropdownMenuItem(text = { Text(stringResource(R.string.lib_menu_select)) }, onClick = { menu = false; selection = emptySet() })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.lib_menu_suggestions)) }, onClick = { menu = false; onOpenSuggestions() })
+                                HorizontalDivider()
+                                DropdownMenuItem(text = { Text(stringResource(R.string.sponsor_menu)) }, onClick = { menu = false; sponsoring = true })
                             }
                         }
                     },
@@ -266,6 +269,8 @@ fun LibraryScreen(
             onDelete = { vm.delete(book); actionsFor = null },
         )
     }
+
+    if (sponsoring) SponsorDialog { sponsoring = false }
 
     seriesDialogFor?.let { books ->
         SeriesDialog(

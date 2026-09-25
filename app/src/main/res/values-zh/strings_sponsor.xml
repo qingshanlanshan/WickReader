@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sponsor_title">支持作者</string>
+    <string name="sponsor_menu">支持作者</string>
+    <string name="sponsor_body">WickReader 免费、无广告、不收集任何数据。如果它帮到了你，欢迎请作者喝杯奶茶，金额随心。</string>
+    <string name="sponsor_note">想说点什么？赞赏任意小金额时写下留言：建议、找到的 bug、想要的新功能都可以，我都会看到。</string>
+    <string name="sponsor_qr_desc">微信赞赏码</string>
+    <string name="sponsor_how">微信赞赏码。在这台手机上：先保存到相册，再在微信「扫一扫」里从相册选取。</string>
+    <string name="sponsor_save">保存到相册</string>
+    <string name="sponsor_save_and_open">保存并打开微信</string>
+    <string name="sponsor_saved">已保存到相册（Pictures/WickReader）</string>
+    <string name="sponsor_save_failed">保存失败</string>
+    <string name="sponsor_close">关闭</string>
+    <string name="sponsor_settings_summary">免费无广告 · 欢迎赞赏和留言</string>
+</resources>

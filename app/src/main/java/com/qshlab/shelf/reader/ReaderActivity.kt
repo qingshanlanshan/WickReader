@@ -61,6 +61,7 @@ import org.readium.navigator.media.tts.android.AndroidTtsEngine
 import org.readium.navigator.media.tts.android.AndroidTtsPreferences
 import org.readium.r2.navigator.DecorableNavigator
 import org.readium.r2.navigator.Decoration
+import org.readium.r2.shared.publication.services.content.content
 import org.readium.r2.shared.publication.services.positions
 import org.readium.r2.shared.publication.services.search.search
 import org.json.JSONObject
@@ -459,7 +460,7 @@ class ReaderActivity : FragmentActivity() {
         setOverlay(false)
         if (tts != null) { tts?.navigator?.play(); return }
         lifecycleScope.launch {
-            val start = from ?: navigator.firstVisibleElementLocator()
+            val start = from ?: navigator.firstVisibleElementLocator()?.let { ttsStartFor(it) ?: it }
             val listener = object : TtsNavigator.Listener {
                 override fun onStopRequested() = stopTts()
             }
@@ -528,6 +529,28 @@ class ReaderActivity : FragmentActivity() {
             refreshVoices()
             nav.play()
         }
+    }
+
+    /**
+     * Readium's read-aloud only starts mid-chapter when the element it gets holds text itself; the
+     * first visible element is often a wrapper, and then it silently starts at the top of the file
+     * (for one-file books, the start of the book). Find the paragraph on screen by its text in
+     * Readium's own content walk and start from that element's locator instead.
+     */
+    private suspend fun ttsStartFor(visible: Locator): Locator? {
+        fun norm(s: String) = s.filterNot { it.isWhitespace() }
+        val needle = visible.text.highlight?.let(::norm)?.take(40)?.takeIf { it.length >= 4 } ?: return null
+        val fromTop = visible.copy(locations = Locator.Locations(), text = Locator.Text())
+        val iterator = session.publication.content(fromTop)?.iterator() ?: return null
+        var seen = 0
+        while (seen++ < 20_000) {
+            val element = iterator.nextOrNull() ?: return null
+            if (element.locator.href != visible.href) return null
+            val text = (element as? org.readium.r2.shared.publication.services.content.Content.TextualElement)?.text ?: continue
+            val t = norm(text)
+            if (t.isNotEmpty() && (t.contains(needle) || needle.contains(t.take(40)))) return element.locator
+        }
+        return null
     }
 
     private fun refreshVoices() {

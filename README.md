@@ -58,6 +58,13 @@ listed by the scan but not opened yet
 Translation downloads each language model (~30 MB) the first time it's used, and needs Google Play
 services (standard on phones sold outside mainland China).
 
+## Download page
+
+`site/` is the page at https://wick.qshlab.com (Cloudflare Workers static assets, no build step).
+Publish a release with `./gradlew assembleRelease && site/deploy.sh`: it copies the APK in (not kept in
+git), writes `version.json` and the `/download` redirect, and deploys. One-time setup on this Mac:
+`cd site && npm_config_cache=.npm-cache npx wrangler@3 login`.
+
 ## Build
 
 ```bash

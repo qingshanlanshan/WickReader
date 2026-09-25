@@ -312,9 +312,12 @@ private fun ReaderSettingsPanel(
         SwitchRow(stringResource(R.string.rd_volume_keys), s.volumeKeysTurnPages) { onChange(s.copy(volumeKeysTurnPages = it)) }
 
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
-        Label(stringResource(R.string.rd_chinese_conversion))
-        SwitchRow(stringResource(if (isTraditional) R.string.rd_book_simplified_detected else R.string.rd_book_simplified), bookSimplified) { onBookSimplifiedChange(it) }
-        SwitchRow(stringResource(R.string.rd_default_simplified), s.toSimplified) { onChange(s.copy(toSimplified = it)) }
+        // 繁简 only matters for Chinese books.
+        if (translationPair.first == "zh") {
+            Label(stringResource(R.string.rd_chinese_conversion))
+            SwitchRow(stringResource(if (isTraditional) R.string.rd_book_simplified_detected else R.string.rd_book_simplified), bookSimplified) { onBookSimplifiedChange(it) }
+            SwitchRow(stringResource(R.string.rd_default_simplified), s.toSimplified) { onChange(s.copy(toSimplified = it)) }
+        }
 
         Label(stringResource(R.string.rd_translate_book))
         val (from, to) = translationPair
