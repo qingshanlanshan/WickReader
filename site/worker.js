@@ -1,5 +1,5 @@
 // wick.qshlab.com: static files from public/, plus POST /api/feedback, which emails the message to
-// the author through Cloudflare Email Routing (the send_email binding). Nothing is stored.
+// the author through Cloudflare Email Routing (the send_email binding). The Worker itself keeps nothing.
 import { EmailMessage } from "cloudflare:email";
 
 const MAX_MESSAGE = 4000;

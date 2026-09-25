@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
-/** Free feedback: posted to wick.qshlab.com, which emails it to the author. Nothing is stored. */
+/** Free feedback: posted to wick.qshlab.com, which emails it to the author. */
 @Composable
 fun FeedbackDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current

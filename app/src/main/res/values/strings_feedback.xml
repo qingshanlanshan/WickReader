@@ -3,7 +3,7 @@
     <string name="fb_title">Send feedback</string>
     <string name="fb_menu">Send feedback</string>
     <string name="fb_settings_summary">Suggestions, bugs, feature requests — free, goes straight to the author</string>
-    <string name="fb_intro">Your message goes straight to the author by email. Nothing is stored.</string>
+    <string name="fb_intro">Your message is sent to the author by email.</string>
     <string name="fb_message">What would you like to say?</string>
     <string name="fb_contact">Email or WeChat (optional)</string>
     <string name="fb_device">Include app version and phone model</string>

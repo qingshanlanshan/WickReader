@@ -3,7 +3,7 @@
     <string name="fb_title">意见反馈</string>
     <string name="fb_menu">意见反馈</string>
     <string name="fb_settings_summary">建议、bug、想要的功能——免费，直接发给作者</string>
-    <string name="fb_intro">你的留言会直接以邮件发给作者，不会被保存。</string>
+    <string name="fb_intro">你的留言会以邮件发给作者。</string>
     <string name="fb_message">想说点什么？</string>
     <string name="fb_contact">邮箱或微信（选填，方便回复）</string>
     <string name="fb_device">附上应用版本和手机型号</string>
