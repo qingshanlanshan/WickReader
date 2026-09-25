@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Qingdeng</string>
+    <string name="app_name">WickReader</string>
     <string name="group_series">By series</string>
     <string name="group_books">By book</string>
     <string name="group_authors">By author</string>

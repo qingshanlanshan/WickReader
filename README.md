@@ -1,4 +1,4 @@
-# 青灯 Qingdeng
+# WickReader 青灯
 
 A personal Android e-book reader (package `com.qshlab.shelf`, kept from the working name "Shelf" so updates install over earlier builds) in the spirit of ReadEra: a tidy modern bookshelf, series
 grouping, 繁→简, read-aloud, translation. Everything runs on the phone; there is no server.

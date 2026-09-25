@@ -31,7 +31,7 @@
     <string name="set_translations_cleared">Translation cache cleared</string>
     <string name="set_clear_translations">Clear translation cache</string>
     <string name="set_section_about">About</string>
-    <string name="set_about">Qingdeng %1$s · All your data stays on this phone.\n\nOpen-source projects used: Readium Kotlin Toolkit (BSD-3), OpenCC dictionaries (Apache-2.0), sherpa-onnx (Apache-2.0), Kokoro-82M v1.1-zh (Apache-2.0), Matcha-TTS, Piper voice models, Apache Commons Compress, Google ML Kit Translation.</string>
+    <string name="set_about">WickReader %1$s · All your data stays on this phone.\n\nOpen-source projects used: Readium Kotlin Toolkit (BSD-3), OpenCC dictionaries (Apache-2.0), sherpa-onnx (Apache-2.0), Kokoro-82M v1.1-zh (Apache-2.0), Matcha-TTS, Piper voice models, Apache Commons Compress, Google ML Kit Translation.</string>
     <string name="set_preview">Preview</string>
     <string name="set_done">Done</string>
     <string name="set_delete_voice_title">Delete “%1$s”?</string>
