@@ -90,6 +90,14 @@
   .qr-desktop { display: flex; gap: 12px; align-items: center; margin-top: 18px; color: var(--muted); font-size: 14px; }
   .qr-desktop img { width: 92px; height: 92px; background: #fff; border-radius: 8px; padding: 4px; }
 
+  .fb { display: grid; gap: 10px; margin-top: 10px; }
+  .fb textarea, .fb input { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .fb textarea { resize: vertical; }
+  .fb .hp { position: absolute; left: -9999px; width: 1px; height: 1px; }
+  .fb-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .fb button.cta { border: 0; cursor: pointer; font: inherit; font-weight: 650; }
+  .fb button.cta:disabled { opacity: .6; cursor: default; }
+  .kofi { margin-top: 12px; background: #29abe0; }
   footer { color: var(--muted); font-size: 14px; padding: 30px 0 40px; border-top: 1px solid var(--line); margin-top: 20px; }
 
   @media (max-width: 760px) {
@@ -173,11 +181,24 @@
     <div class="sponsor">
       <div>
         <h2 data-i18n="sponsorTitle">请作者喝杯奶茶</h2>
-        <p data-i18n="sponsor">WickReader 免费、无广告、不收集任何数据。如果它帮到了你，欢迎随意赞助，金额随心。</p>
-        <div class="note" data-i18n="sponsorNote">想说点什么？赞赏任意小金额时写下留言：建议、找到的 bug、想要的新功能都可以，我都会看到。</div>
+        <p data-i18n="sponsor">WickReader 免费、无广告、不收集任何数据。如果它帮到了你，欢迎随意赞助，金额随心。意见反馈永远免费，请用下面的表单。</p>
+        <a class="cta kofi" id="kofi" href="#" hidden><span data-i18n="kofi">Ko-fi（银行卡 / PayPal）</span></a>
         <p class="meta" id="sponsorHint" data-i18n="sponsorHint">用微信扫码；在手机上可以截图后，在微信「扫一扫」里从相册选取。</p>
       </div>
       <img src="/img-sponsor-wechat.png" alt="WeChat" width="190" height="190">
+    </div>
+  </section>
+
+  <section id="feedback">
+    <div class="card">
+      <h2 data-i18n="fbTitle">意见反馈</h2>
+      <p class="meta" data-i18n="fbIntro">建议、bug、想要的功能都欢迎。留言会直接以邮件发给作者，不会被保存。</p>
+      <form id="fbForm" class="fb">
+        <textarea id="fbMessage" rows="5" maxlength="4000" required data-i18n-ph="fbMessage" placeholder="想说点什么？"></textarea>
+        <input id="fbContact" maxlength="200" data-i18n-ph="fbContact" placeholder="邮箱或微信（选填，方便回复）">
+        <input id="fbWebsite" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div class="fb-row"><button class="cta" type="submit" id="fbSend" data-i18n="fbSend">发送</button><span id="fbStatus" class="meta"></span></div>
+      </form>
     </div>
   </section>
 
@@ -214,15 +235,44 @@
       privacyTitle: "Your books stay on your phone",
       privacy: "No account, no cloud, no ads or analytics. Books, progress and notes live on your phone. AI voices and translation models download the first time you use them, then work offline.",
       sponsorTitle: "Buy the author a tea",
-      sponsor: "WickReader is free, has no ads and collects no data. If it helps you, tips of any amount are welcome.",
-      sponsorNote: "Want to say something? Leave a note with a tip of any small amount — suggestions, bugs, features you'd like. I read every one.",
+      sponsor: "WickReader is free, has no ads and collects no data. If it helps you, tips of any amount are welcome. Feedback is always free — use the form below.",
+      kofi: "Support on Ko-fi (card / PayPal)",
+      fbTitle: "Send feedback", fbIntro: "Suggestions, bugs, feature requests — all welcome. Your message goes straight to the author by email; nothing is stored.",
+      fbMessage: "What would you like to say?", fbContact: "Email or WeChat (optional, so I can reply)", fbSend: "Send",
+      fbSent: "Thanks — your message was sent.", fbRate: "Too many messages for now; please try again later.", fbFail: "Couldn't send right now; please try again later.",
       sponsorHint: "Scan with WeChat. On a phone, take a screenshot and pick it from the album in WeChat's Scan.",
       qr: "On a computer? Scan this with your phone to open this page there.",
       made: "Made by qshlab", heqie: "Heqie Dojo (a mahjong trainer)"
     }
   };
+  T.zh.fbSent = "谢谢！已发送。"; T.zh.fbRate = "发送太频繁了，请稍后再试。"; T.zh.fbFail = "暂时无法发送，请稍后再试。";
   var nodes = document.querySelectorAll("[data-i18n]");
   nodes.forEach(function (n) { T.zh[n.getAttribute("data-i18n")] = n.innerHTML; });
+  var phs = document.querySelectorAll("[data-i18n-ph]");
+  phs.forEach(function (n) { T.zh[n.getAttribute("data-i18n-ph")] = n.getAttribute("placeholder"); });
+
+  // International tips: set to the Ko-fi page URL to show the button.
+  var KOFI_URL = "";
+  if (KOFI_URL) { var k = document.getElementById("kofi"); k.href = KOFI_URL; k.hidden = false; }
+
+  document.getElementById("fbForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var btn = document.getElementById("fbSend"), st = document.getElementById("fbStatus");
+    btn.disabled = true; st.textContent = "…";
+    fetch("/api/feedback", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        message: document.getElementById("fbMessage").value,
+        contact: document.getElementById("fbContact").value,
+        website: document.getElementById("fbWebsite").value,
+        language: lang, source: "web " + navigator.userAgent.slice(0, 120)
+      })
+    }).then(function (r) {
+      if (r.ok) { st.textContent = T[lang].fbSent; document.getElementById("fbMessage").value = ""; }
+      else st.textContent = r.status === 429 ? T[lang].fbRate : T[lang].fbFail;
+    }).catch(function () { st.textContent = T[lang].fbFail; })
+      .finally(function () { btn.disabled = false; });
+  });
 
   var saved = null;
   try { saved = localStorage.getItem("lang"); } catch (e) {}
@@ -234,6 +284,10 @@
     nodes.forEach(function (n) {
       var v = T[l][n.getAttribute("data-i18n")];
       if (v !== undefined) n.innerHTML = v;
+    });
+    phs.forEach(function (n) {
+      var v = T[l][n.getAttribute("data-i18n-ph")];
+      if (v !== undefined) n.setAttribute("placeholder", v);
     });
     document.querySelectorAll("img[data-src-zh]").forEach(function (img) {
       img.src = img.getAttribute(l === "zh" ? "data-src-zh" : "data-src-en");

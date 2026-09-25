@@ -33,6 +33,9 @@ import com.qshlab.shelf.R
 
 private const val WECHAT = "com.tencent.mm"
 
+/** International tips (card / PayPal); null hides the button. */
+private val KOFI_URL: String? = null
+
 /**
  * "Support the author": the WeChat tip code, and a way to use it from the same phone (a code on
  * your own screen can't be scanned, so it's saved to the album for WeChat's scan-from-album).
@@ -47,8 +50,11 @@ fun SponsorDialog(onDismiss: () -> Unit) {
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(stringResource(R.string.sponsor_body), style = MaterialTheme.typography.bodyMedium)
-                Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.small) {
-                    Text(stringResource(R.string.sponsor_note), Modifier.padding(10.dp), style = MaterialTheme.typography.bodySmall)
+                // Outside China: card / PayPal through Ko-fi, once a link is set.
+                KOFI_URL?.let { url ->
+                    androidx.compose.material3.OutlinedButton(onClick = {
+                        runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+                    }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sponsor_kofi)) }
                 }
                 Image(painterResource(R.drawable.sponsor_wechat), stringResource(R.string.sponsor_qr_desc), Modifier.size(220.dp))
                 Text(

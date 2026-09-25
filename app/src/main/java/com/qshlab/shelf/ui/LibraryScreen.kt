@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.ViewHeadline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -107,6 +108,12 @@ fun LibraryScreen(
     var seriesDialogFor by remember { mutableStateOf<List<Book>?>(null) }
     var confirmDelete by remember { mutableStateOf<Set<Long>?>(null) }
     var sponsoring by remember { mutableStateOf(false) }
+    var feedback by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val update by com.qshlab.shelf.update.Updates.available.collectAsState()
+    var showUpdate by remember { mutableStateOf(false) }
+    // At most once a day (and only if automatic checks are on).
+    LaunchedEffect(Unit) { com.qshlab.shelf.update.Updates.check(context) }
     val s = state.settings
 
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
@@ -196,6 +203,7 @@ fun LibraryScreen(
                                 DropdownMenuItem(text = { Text(stringResource(R.string.lib_menu_select)) }, onClick = { menu = false; selection = emptySet() })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.lib_menu_suggestions)) }, onClick = { menu = false; onOpenSuggestions() })
                                 HorizontalDivider()
+                                DropdownMenuItem(text = { Text(stringResource(R.string.fb_menu)) }, onClick = { menu = false; feedback = true })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.sponsor_menu)) }, onClick = { menu = false; sponsoring = true })
                             }
                         }
@@ -238,6 +246,7 @@ fun LibraryScreen(
                     val showHeader = state.query.isBlank() && !s.filtering
                     val header: (@Composable () -> Unit)? = if (!showHeader) null else ({
                         Column {
+                            update?.let { u -> UpdateBanner(u.version) { showUpdate = true } }
                             if (state.suggestions.isNotEmpty()) SuggestionBanner(state.suggestions.size, onOpenSuggestions)
                             if (current != null) ContinueCard(current) { onOpenBook(current) }
                         }
@@ -271,6 +280,8 @@ fun LibraryScreen(
     }
 
     if (sponsoring) SponsorDialog { sponsoring = false }
+    if (feedback) FeedbackDialog { feedback = false }
+    update?.let { u -> if (showUpdate) com.qshlab.shelf.update.UpdateDialog(u) { showUpdate = false } }
 
     seriesDialogFor?.let { books ->
         SeriesDialog(
@@ -414,6 +425,26 @@ private fun MenuChip(label: String, onClick: () -> Unit) {
 @Composable
 private fun MenuHeader(text: String) {
     Text(text, Modifier.padding(horizontal = 12.dp, vertical = 6.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+}
+
+@Composable
+private fun UpdateBanner(version: String, onOpen: () -> Unit) {
+    Surface(
+        onClick = onOpen,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp),
+    ) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.SystemUpdate, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text(
+                stringResource(R.string.upd_banner, version),
+                Modifier.weight(1f).padding(start = 10.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+    }
 }
 
 @Composable

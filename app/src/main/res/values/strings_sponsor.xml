@@ -2,8 +2,7 @@
 <resources>
     <string name="sponsor_title">Support the author</string>
     <string name="sponsor_menu">Support the author</string>
-    <string name="sponsor_body">WickReader is free, has no ads and collects no data. If it helps you, you\'re welcome to buy the author a cup of tea — any amount is fine.</string>
-    <string name="sponsor_note">Want to say something? Leave a note with a tip of any small amount — suggestions, bugs you found, features you\'d like. I read every one.</string>
+    <string name="sponsor_body">WickReader is free, has no ads and collects no data. If it helps you, you\'re welcome to buy the author a cup of tea — any amount is fine. (Feedback is always free: use Send feedback.)</string>
     <string name="sponsor_qr_desc">WeChat tip code</string>
     <string name="sponsor_how">WeChat tip code. On this phone: save it, then in WeChat choose Scan → pick it from your album.</string>
     <string name="sponsor_save">Save to album</string>
@@ -11,5 +10,5 @@
     <string name="sponsor_saved">Saved to your album (Pictures/WickReader)</string>
     <string name="sponsor_save_failed">Couldn\'t save the image</string>
     <string name="sponsor_close">Close</string>
-    <string name="sponsor_settings_summary">Free, no ads — tips and notes welcome</string>
+    <string name="sponsor_settings_summary">Free, no ads — tips welcome</string>
 </resources>

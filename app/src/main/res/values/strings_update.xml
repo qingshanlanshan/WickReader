@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="upd_title">Version %1$s is available</string>
+    <string name="upd_current">You have %1$s · download %2$s</string>
+    <string name="upd_keeps_data">Updating keeps your books, progress and voices.</string>
+    <string name="upd_downloading">Downloading… %1$d%%</string>
+    <string name="upd_failed">The download didn\'t finish. Check your connection, or get it from the website.</string>
+    <string name="upd_update">Update</string>
+    <string name="upd_later">Later</string>
+    <string name="upd_open_site">Open website</string>
+    <string name="upd_banner">Version %1$s is available — tap to update</string>
+    <string name="upd_check">Check for updates</string>
+    <string name="upd_check_summary">Current version %1$s</string>
+    <string name="upd_checking">Checking…</string>
+    <string name="upd_up_to_date">You have the latest version</string>
+    <string name="upd_check_failed">Couldn\'t reach the update server</string>
+    <string name="upd_auto">Check for updates automatically</string>
+    <string name="upd_auto_summary">Once a day, only reads the version number from wick.qshlab.com</string>
+</resources>

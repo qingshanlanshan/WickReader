@@ -102,6 +102,9 @@ fun SettingsScreen(onBack: () -> Unit) {
     val downloads by app.voices.downloads.collectAsState()
     var picking by remember { mutableStateOf<String?>(null) }
     var sponsoring by remember { mutableStateOf(false) }
+    var feedback by remember { mutableStateOf(false) }
+    var updateStatus by remember { mutableStateOf<String?>(null) }
+    var updateFound by remember { mutableStateOf<com.qshlab.shelf.update.UpdateInfo?>(null) }
     var confirmDelete by remember { mutableStateOf<VoiceModel?>(null) }
     var storageVersion by remember { mutableStateOf(0) }
     var pickingLanguage by remember { mutableStateOf(false) }
@@ -215,7 +218,35 @@ fun SettingsScreen(onBack: () -> Unit) {
             }
 
             item { Section(stringResource(R.string.set_section_about)) }
+            item { SettingRow(stringResource(R.string.fb_menu), stringResource(R.string.fb_settings_summary)) { feedback = true } }
             item { SettingRow(stringResource(R.string.sponsor_menu), stringResource(R.string.sponsor_settings_summary)) { sponsoring = true } }
+            item {
+                val checkingText = stringResource(R.string.upd_checking)
+                val upToDate = stringResource(R.string.upd_up_to_date)
+                val failedText = stringResource(R.string.upd_check_failed)
+                SettingRow(
+                    stringResource(R.string.upd_check),
+                    updateStatus ?: stringResource(R.string.upd_check_summary, com.qshlab.shelf.update.Updates.installedVersionName(context)),
+                ) {
+                    updateStatus = checkingText
+                    scope.launch {
+                        val latest = com.qshlab.shelf.update.Updates.fetchLatest()
+                        val newer = com.qshlab.shelf.update.Updates.check(context, force = true)
+                        updateStatus = when {
+                            latest == null -> failedText
+                            newer != null -> null.also { updateFound = newer }
+                            else -> upToDate
+                        }
+                    }
+                }
+            }
+            item {
+                var auto by remember { mutableStateOf(com.qshlab.shelf.update.Updates.autoCheck(context)) }
+                SwitchSetting(stringResource(R.string.upd_auto), stringResource(R.string.upd_auto_summary), auto) { v ->
+                    auto = v
+                    com.qshlab.shelf.update.Updates.setAutoCheck(context, v)
+                }
+            }
             item {
                 val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() }
                 Text(
@@ -229,6 +260,8 @@ fun SettingsScreen(onBack: () -> Unit) {
     }
 
     if (sponsoring) SponsorDialog { sponsoring = false }
+    if (feedback) FeedbackDialog { feedback = false }
+    updateFound?.let { u -> com.qshlab.shelf.update.UpdateDialog(u) { updateFound = null } }
 
     picking?.let { lang ->
         val models = VoiceCatalog.models.filter { it.id in installed && lang in it.languages }

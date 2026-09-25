@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fb_title">Send feedback</string>
+    <string name="fb_menu">Send feedback</string>
+    <string name="fb_settings_summary">Suggestions, bugs, feature requests — free, goes straight to the author</string>
+    <string name="fb_intro">Your message goes straight to the author by email. Nothing is stored.</string>
+    <string name="fb_message">What would you like to say?</string>
+    <string name="fb_contact">Email or WeChat (optional)</string>
+    <string name="fb_device">Include app version and phone model</string>
+    <string name="fb_send">Send</string>
+    <string name="fb_cancel">Cancel</string>
+    <string name="fb_close">Close</string>
+    <string name="fb_sent">Thanks — your message was sent.</string>
+    <string name="fb_rate">Too many messages for now; please try again later.</string>
+    <string name="fb_failed">Couldn\'t send right now; please try again later.</string>
+    <string name="fb_offline">No connection. Your message is kept; try again when you\'re online.</string>
+    <string name="sponsor_kofi">Ko-fi (card / PayPal)</string>
+</resources>

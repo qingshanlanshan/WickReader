@@ -1,0 +1,5 @@
+· Send feedback: message the author for free, from Settings or the shelf menu
+· Update check: a banner on the shelf when a new version is out, installed in one tap
+· Support the author: a new tip option
+· Read-aloud starts at the paragraph on screen (single-file books started from the top)
+· Vertical text uses the full screen height

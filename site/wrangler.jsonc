@@ -1,10 +1,19 @@
-// Cloudflare Workers config: a static-only site (no Worker script) served from public/.
-// Published from this Mac with ./deploy.sh (the APK is not kept in git).
+// Cloudflare Workers config: static files from public/ plus a small Worker (worker.js) for
+// POST /api/feedback. Published from this Mac with ./deploy.sh (the APK is not kept in git).
 {
   "name": "wickreader",
+  "main": "worker.js",
   "compatibility_date": "2026-09-25",
   "assets": {
     "directory": "./public",
+    "binding": "ASSETS",
+  },
+  // Feedback is emailed through Cloudflare Email Routing on qshlab.com; the destination must be a
+  // verified address there.
+  "send_email": [{ "name": "FEEDBACK", "destination_address": "FEEDBACK_TO_ADDRESS" }],
+  "vars": {
+    "FEEDBACK_FROM": "feedback@qshlab.com",
+    "FEEDBACK_TO": "FEEDBACK_TO_ADDRESS",
   },
   // Cloudflare creates the DNS record and certificate for the custom domain.
   "routes": [{ "pattern": "wick.qshlab.com", "custom_domain": true }],

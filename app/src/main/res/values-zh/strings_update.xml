@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="upd_title">新版本 %1$s 可用</string>
+    <string name="upd_current">当前版本 %1$s · 下载 %2$s</string>
+    <string name="upd_keeps_data">更新后书、阅读进度和语音都会保留。</string>
+    <string name="upd_downloading">正在下载… %1$d%%</string>
+    <string name="upd_failed">下载没有完成。请检查网络，或到网站下载。</string>
+    <string name="upd_update">更新</string>
+    <string name="upd_later">以后再说</string>
+    <string name="upd_open_site">打开网站</string>
+    <string name="upd_banner">新版本 %1$s 可用，点此更新</string>
+    <string name="upd_check">检查更新</string>
+    <string name="upd_check_summary">当前版本 %1$s</string>
+    <string name="upd_checking">正在检查…</string>
+    <string name="upd_up_to_date">已经是最新版本</string>
+    <string name="upd_check_failed">无法连接更新服务器</string>
+    <string name="upd_auto">自动检查更新</string>
+    <string name="upd_auto_summary">每天一次，只读取 wick.qshlab.com 上的版本号</string>
+</resources>
