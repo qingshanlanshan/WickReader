@@ -1,0 +1,12 @@
+// Cloudflare Workers config: a static-only site (no Worker script) served from public/.
+// Published from this Mac with ./deploy.sh (the APK is not kept in git).
+{
+  "name": "wickreader",
+  "compatibility_date": "2026-09-25",
+  "assets": {
+    "directory": "./public",
+  },
+  // Cloudflare creates the DNS record and certificate for the custom domain.
+  "routes": [{ "pattern": "wick.qshlab.com", "custom_domain": true }],
+  "workers_dev": false,
+}

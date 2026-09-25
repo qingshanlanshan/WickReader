@@ -8,3 +8,10 @@ local.properties
 .kotlin/
 keystore.properties
 keystore/
+
+# Download site: generated on deploy
+site/public/*.apk
+site/public/version.json
+site/public/_redirects
+site/.wrangler/
+site/.npm-cache/

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#24584F"/><stop offset="1" stop-color="#0F2E2A"/></linearGradient>
+    <radialGradient id="glow" cx="54" cy="44" r="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFD27A" stop-opacity=".4"/><stop offset="1" stop-color="#FFD27A" stop-opacity="0"/></radialGradient>
+    <linearGradient id="flame" x1="0" y1="27" x2="0" y2="53" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFE7A3"/><stop offset="1" stop-color="#F29A2E"/></linearGradient>
+  </defs>
+  <rect width="108" height="108" rx="24" fill="url(#bg)"/>
+  <circle cx="54" cy="44" r="24" fill="url(#glow)"/>
+  <path d="M54,27 C58.5,34 62,39.5 62,45.5 A8,8 0 0 1 46,45.5 C46,39.5 49.5,34 54,27 Z" fill="url(#flame)"/>
+  <path d="M54,38 C56,41.5 57.5,44 57.5,47 A3.5,3.5 0 0 1 50.5,47 C50.5,44 52,41.5 54,38 Z" fill="#FFF6D8"/>
+  <path d="M53.2,51 L54.8,51 L54.8,54.5 L53.2,54.5 Z" fill="#3B2A1E"/>
+  <path d="M37,54 L71,54 C70,61.5 63,65.5 54,65.5 C45,65.5 38,61.5 37,54 Z" fill="#E9DDC2"/>
+  <path d="M36,52.5 L72,52.5 A1.5,1.5 0 0 1 72,55.5 L36,55.5 A1.5,1.5 0 0 1 36,52.5 Z" fill="#C9B78F"/>
+  <path d="M51,65 L57,65 L58,73 L50,73 Z" fill="#E9DDC2"/>
+  <path d="M41,73.5 L67,73.5 C67,77.5 62,79.5 54,79.5 C46,79.5 41,77.5 41,73.5 Z" fill="#E9DDC2"/>
+</svg>

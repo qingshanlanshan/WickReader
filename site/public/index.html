@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WickReader 青灯 · 安卓电子书阅读器</title>
+<meta name="description" content="WickReader 青灯：安静好用的安卓电子书阅读器。离线使用、无广告、无需注册。A calm, capable e-book reader for Android.">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1c4a43">
+<style>
+  :root {
+    --bg: #f6f2e9;
+    --panel: #fffdf8;
+    --ink: #1f2b28;
+    --muted: #5d6b67;
+    --line: #e4ddce;
+    --accent: #1f5a50;
+    --accent-ink: #ffffff;
+    --flame: #e8962c;
+    --soft: #e7efe9;
+    --shadow: 0 10px 30px rgba(31, 43, 40, .10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1d1b;
+      --panel: #152724;
+      --ink: #e9efe9;
+      --muted: #a6b5b0;
+      --line: #25403b;
+      --accent: #6fbfa9;
+      --accent-ink: #0f1d1b;
+      --flame: #f2b25a;
+      --soft: #1b322e;
+      --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", Roboto, sans-serif;
+  }
+  a { color: var(--accent); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+
+  header.top { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; letter-spacing: .2px; }
+  .brand img { width: 30px; height: 30px; }
+  .lang { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+
+  .hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 32px; align-items: center; padding: 28px 0 40px; }
+  .hero h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.15; margin: 0 0 14px; font-weight: 750; }
+  .hero h1 .cn { color: var(--flame); font-weight: 700; margin-left: .25em; }
+  .lead { font-size: 18px; color: var(--muted); margin: 0 0 24px; }
+  .cta { display: inline-flex; align-items: center; gap: 10px; background: var(--accent); color: var(--accent-ink); text-decoration: none; padding: 14px 22px; border-radius: 14px; font-weight: 650; font-size: 17px; box-shadow: var(--shadow); }
+  .cta:active { transform: translateY(1px); }
+  .cta svg { width: 20px; height: 20px; }
+  .meta { color: var(--muted); font-size: 14px; margin-top: 10px; }
+  .meta code { font-size: 12px; word-break: break-all; }
+  .notice { display: none; margin: 16px 0 0; padding: 12px 14px; border-radius: 12px; background: #fff3dc; color: #6b4a12; border: 1px solid #f0d49b; font-size: 15px; }
+  .notice.show { display: block; }
+  .hero-art { position: relative; min-height: 540px; }
+  .phone { position: absolute; width: 58%; border-radius: 22px; box-shadow: var(--shadow); border: 6px solid #1b1f1e; background: #1b1f1e; }
+  .phone img { display: block; width: 100%; border-radius: 16px; }
+  .phone.a { left: 0; top: 30px; transform: rotate(-4deg); }
+  .phone.b { right: 0; top: 0; transform: rotate(3deg); }
+
+  section { padding: 34px 0; }
+  h2 { font-size: 26px; margin: 0 0 18px; }
+  .shots { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(200px, 1fr); gap: 16px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; }
+  .shots figure { margin: 0; scroll-snap-align: start; }
+  .shots img { width: 100%; border-radius: 16px; border: 1px solid var(--line); display: block; background: var(--panel); }
+  .shots figcaption { color: var(--muted); font-size: 14px; margin-top: 8px; text-align: center; }
+
+  .features { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+  .card h3 { margin: 0 0 6px; font-size: 17px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  .card .ico { font-size: 22px; margin-bottom: 6px; }
+
+  ol.steps { margin: 0; padding-left: 1.3em; }
+  ol.steps li { margin: 6px 0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .sponsor { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; background: var(--soft); border-radius: 20px; padding: 24px; }
+  .sponsor img { width: 190px; height: 190px; border-radius: 12px; background: #fff; padding: 6px; display: block; }
+  .sponsor .note { background: var(--panel); border-radius: 12px; padding: 12px 14px; margin-top: 12px; font-size: 15px; }
+  .qr-desktop { display: flex; gap: 12px; align-items: center; margin-top: 18px; color: var(--muted); font-size: 14px; }
+  .qr-desktop img { width: 92px; height: 92px; background: #fff; border-radius: 8px; padding: 4px; }
+
+  footer { color: var(--muted); font-size: 14px; padding: 30px 0 40px; border-top: 1px solid var(--line); margin-top: 20px; }
+
+  @media (max-width: 760px) {
+    .hero { grid-template-columns: 1fr; padding-top: 8px; }
+    .hero-art { min-height: 0; height: 88vw; max-height: 460px; order: -1; }
+    .phone { width: 44%; }
+    .phone.a { left: 4%; }
+    .phone.b { right: 4%; }
+    .two, .sponsor { grid-template-columns: 1fr; }
+    .sponsor img { margin: 0 auto; }
+    .qr-desktop { display: none; }
+  }
+  @media (hover: none) { .qr-desktop { display: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><img src="/icon.svg" alt=""><span>WickReader <span data-i18n="cnName">青灯</span></span></div>
+    <button class="lang" id="lang" type="button">EN</button>
+  </header>
+
+  <div class="hero">
+    <div>
+      <h1><span data-i18n="h1">安静好用的<br>安卓电子书阅读器</span></h1>
+      <p class="lead" data-i18n="lead">离线使用，无广告，不需要注册，不收集任何数据。书架整洁，读起来舒服，还能用自然的 AI 声音朗读。</p>
+      <a class="cta" id="download" href="/download">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        <span data-i18n="download">下载安卓版</span>
+      </a>
+      <div class="meta"><span id="ver">APK</span> · <span data-i18n="req">Android 8.0 及以上</span></div>
+      <div class="qr-desktop"><img src="/img/qr.svg" alt=""><span data-i18n="qr">在电脑上？用手机扫这个码打开本页下载。</span></div>
+      <div class="notice" id="wechat" data-i18n="wechat">微信里无法直接下载安装包：请点右上角「···」，选择「在浏览器打开」。</div>
+    </div>
+    <div class="hero-art">
+      <div class="phone a"><img data-src-zh="/img/lib_zh.webp" data-src-en="/img/lib_en.webp" src="/img/lib_zh.webp" alt=""></div>
+      <div class="phone b"><img data-src-zh="/img/vert_zh.webp" data-src-en="/img/tts_en.webp" src="/img/vert_zh.webp" alt=""></div>
+    </div>
+  </div>
+
+  <section>
+    <h2 data-i18n="shotsTitle">看一看</h2>
+    <div class="shots">
+      <figure><img loading="lazy" data-src-zh="/img/lib_zh.webp" data-src-en="/img/lib_en.webp" src="/img/lib_zh.webp" alt=""><figcaption data-i18n="cap1">按系列整理的书架</figcaption></figure>
+      <figure><img loading="lazy" data-src-zh="/img/panel_zh.webp" data-src-en="/img/panel_en.webp" src="/img/panel_zh.webp" alt=""><figcaption data-i18n="cap2">边调边看的阅读设置</figcaption></figure>
+      <figure><img loading="lazy" data-src-zh="/img/vert_zh.webp" data-src-en="/img/tts_en.webp" src="/img/vert_zh.webp" alt=""><figcaption data-i18n="cap3">竖排与日式翻页</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-i18n="featTitle">能做什么</h2>
+    <div class="features">
+      <div class="card"><div class="ico">📚</div><h3 data-i18n="f1t">整洁的书架</h3><p data-i18n="f1">按系列、作者或书籍整理；自动识别系列，没有标注的书也会给出建议，一键确认。</p></div>
+      <div class="card"><div class="ico">🔤</div><h3 data-i18n="f2t">读得舒服</h3><p data-i18n="f2">不同的书统一字体、字号和行距；设置面板在侧边，边调边看效果。</p></div>
+      <div class="card"><div class="ico">🎧</div><h3 data-i18n="f3t">AI 朗读</h3><p data-i18n="f3">离线 AI 语音，中文和英文，一百种声音可选；熄屏也能继续听。</p></div>
+      <div class="card"><div class="ico">🀄</div><h3 data-i18n="f4t">繁简与竖排</h3><p data-i18n="f4">繁体一键转简体；支持竖排和日式从右往左翻页。</p></div>
+      <div class="card"><div class="ico">🌐</div><h3 data-i18n="f5t">查词与整本翻译</h3><p data-i18n="f5">选中文字即可查词翻译；整本书可以双语对照（中、英、日，离线）。</p></div>
+      <div class="card"><div class="ico">🗂️</div><h3 data-i18n="f6t">多种格式</h3><p data-i18n="f6">EPUB、PDF、TXT、FB2、Word、CBZ 漫画；能扫描出手机里所有的电子书。</p></div>
+      <div class="card"><div class="ico">🔖</div><h3 data-i18n="f7t">书签、高亮与笔记</h3><p data-i18n="f7">随手标记，书内全文搜索，页码和进度一目了然。</p></div>
+      <div class="card"><div class="ico">🏛️</div><h3 data-i18n="f8t">免费公版书</h3><p data-i18n="f8">内置 Project Gutenberg 在线书库，也可以添加自己的 OPDS 书库。</p></div>
+    </div>
+  </section>
+
+  <section class="two">
+    <div class="card">
+      <h2 data-i18n="installTitle">怎么安装</h2>
+      <ol class="steps">
+        <li data-i18n="s1">在安卓手机上点上面的「下载安卓版」。</li>
+        <li data-i18n="s2">打开下载好的文件；如果提示，允许浏览器或文件管理器「安装未知应用」。</li>
+        <li data-i18n="s3">点「安装」，完成。</li>
+      </ol>
+      <p class="meta" data-i18n="update">有新版本时，直接下载覆盖安装即可，书和阅读进度都会保留。</p>
+    </div>
+    <div class="card">
+      <h2 data-i18n="privacyTitle">你的书只在你的手机上</h2>
+      <p data-i18n="privacy">没有账号，没有云端，没有广告和统计。书、进度、笔记都保存在手机里。AI 语音和翻译模型在第一次使用时下载，之后离线运行。</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sponsor">
+      <div>
+        <h2 data-i18n="sponsorTitle">请作者喝杯奶茶</h2>
+        <p data-i18n="sponsor">WickReader 免费、无广告、不收集任何数据。如果它帮到了你，欢迎随意赞助，金额随心。</p>
+        <div class="note" data-i18n="sponsorNote">想说点什么？赞赏任意小金额时写下留言：建议、找到的 bug、想要的新功能都可以，我都会看到。</div>
+        <p class="meta" id="sponsorHint" data-i18n="sponsorHint">用微信扫码；在手机上可以截图后，在微信「扫一扫」里从相册选取。</p>
+      </div>
+      <img src="/img/sponsor-wechat.png" alt="WeChat" width="190" height="190">
+    </div>
+  </section>
+
+  <footer>
+    <div><span data-i18n="made">由 qshlab 制作</span> · <a href="https://heqie.qshlab.com" data-i18n="heqie">何切道场</a></div>
+    <div class="meta">SHA-256: <code id="sha">—</code></div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var T = {
+    zh: {},
+    en: {
+      cnName: "", h1: "A calm, capable<br>e-book reader for Android",
+      lead: "Works offline. No ads, no account, no data collected. A tidy shelf, comfortable reading, and natural AI read-aloud.",
+      download: "Download for Android", req: "Android 8.0 or later",
+      wechat: "WeChat can't download app files: tap “···” at the top right and choose “Open in browser”.",
+      shotsTitle: "Take a look", cap1: "A shelf organised by series", cap2: "Adjust type while you read", cap3: "Natural read-aloud",
+      featTitle: "What it does",
+      f1t: "A tidy shelf", f1: "Organise by series, author or book. Series are detected automatically, and unlabeled books get suggestions you confirm in one tap.",
+      f2t: "Comfortable reading", f2: "Consistent fonts, sizes and spacing across books, adjusted in a side panel while the page stays visible.",
+      f3t: "AI read-aloud", f3: "Offline AI voices for Chinese and English, a hundred to choose from. Keeps going with the screen off.",
+      f4t: "Chinese & Japanese", f4: "Traditional → Simplified Chinese in one tap; vertical text and right-to-left page turns.",
+      f5t: "Look up & translate", f5: "Select text to look it up; read whole books side by side with a translation (Chinese, English, Japanese; offline).",
+      f6t: "Many formats", f6: "EPUB, PDF, TXT, FB2, Word and CBZ comics. Scans your phone for every e-book it finds.",
+      f7t: "Bookmarks, highlights, notes", f7: "Mark as you go, search inside books, and always know your page and progress.",
+      f8t: "Free classics", f8: "Browse Project Gutenberg built in, or add your own OPDS catalog.",
+      installTitle: "How to install",
+      s1: "On your Android phone, tap “Download for Android” above.",
+      s2: "Open the downloaded file. If asked, allow your browser or file manager to “install unknown apps”.",
+      s3: "Tap “Install”. Done.",
+      update: "To update, download the new version and install it over the old one — your books and progress stay.",
+      privacyTitle: "Your books stay on your phone",
+      privacy: "No account, no cloud, no ads or analytics. Books, progress and notes live on your phone. AI voices and translation models download the first time you use them, then work offline.",
+      sponsorTitle: "Buy the author a tea",
+      sponsor: "WickReader is free, has no ads and collects no data. If it helps you, tips of any amount are welcome.",
+      sponsorNote: "Want to say something? Leave a note with a tip of any small amount — suggestions, bugs, features you'd like. I read every one.",
+      sponsorHint: "Scan with WeChat. On a phone, take a screenshot and pick it from the album in WeChat's Scan.",
+      qr: "On a computer? Scan this with your phone to open this page there.",
+      made: "Made by qshlab", heqie: "Heqie Dojo (a mahjong trainer)"
+    }
+  };
+  var nodes = document.querySelectorAll("[data-i18n]");
+  nodes.forEach(function (n) { T.zh[n.getAttribute("data-i18n")] = n.innerHTML; });
+
+  var saved = null;
+  try { saved = localStorage.getItem("lang"); } catch (e) {}
+  var lang = saved || ((navigator.language || "").toLowerCase().indexOf("zh") === 0 ? "zh" : "en");
+
+  function apply(l) {
+    lang = l;
+    document.documentElement.lang = l === "zh" ? "zh-CN" : "en";
+    nodes.forEach(function (n) {
+      var v = T[l][n.getAttribute("data-i18n")];
+      if (v !== undefined) n.innerHTML = v;
+    });
+    document.querySelectorAll("img[data-src-zh]").forEach(function (img) {
+      img.src = img.getAttribute(l === "zh" ? "data-src-zh" : "data-src-en");
+    });
+    document.getElementById("lang").textContent = l === "zh" ? "EN" : "中文";
+    document.title = l === "zh" ? "WickReader 青灯 · 安卓电子书阅读器" : "WickReader · E-book reader for Android";
+    showVersion();
+  }
+
+  var info = null;
+  function showVersion() {
+    if (!info) return;
+    var mb = (info.size / 1048576).toFixed(1) + " MB";
+    document.getElementById("ver").textContent = "v" + info.version + " · " + mb;
+    document.getElementById("sha").textContent = info.sha256;
+  }
+  fetch("/version.json", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+    info = j;
+    document.getElementById("download").href = "/" + j.file;
+    showVersion();
+  }).catch(function () {});
+
+  if (/MicroMessenger/i.test(navigator.userAgent)) document.getElementById("wechat").classList.add("show");
+
+  document.getElementById("lang").addEventListener("click", function () {
+    var next = lang === "zh" ? "en" : "zh";
+    try { localStorage.setItem("lang", next); } catch (e) {}
+    apply(next);
+  });
+  apply(lang);
+})();
+</script>
+</body>
+</html>
