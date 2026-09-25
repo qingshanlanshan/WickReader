@@ -9,7 +9,13 @@ import com.qshlab.shelf.chinese.ChineseConverter
 import com.qshlab.shelf.data.ImportResult
 import com.qshlab.shelf.reader.showsSimplified
 import com.qshlab.shelf.settings.LibrarySettings
-import com.qshlab.shelf.settings.LibraryTab
+import com.qshlab.shelf.data.SeriesSuggester
+import com.qshlab.shelf.data.languageKey
+import com.qshlab.shelf.settings.GroupBy
+import com.qshlab.shelf.settings.StatusFilter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import com.qshlab.shelf.settings.SortOrder
 import com.qshlab.shelf.shelfApp
 import java.text.Collator
@@ -31,8 +37,8 @@ sealed interface ShelfItem {
         override val key = "b${book.id}"
     }
 
-    data class Stack(val name: String, val books: List<Book>) : ShelfItem {
-        override val key = "s$name"
+    data class Stack(val name: String, val books: List<Book>, val kind: GroupKind = GroupKind.SERIES) : ShelfItem {
+        override val key = (if (kind == GroupKind.SERIES) "s" else "a") + name
         val progress: Float get() = books.map { it.progress }.average().toFloat()
         val lastOpenedAt: Long get() = books.maxOf { it.lastOpenedAt ?: 0L }
         val addedAt: Long get() = books.maxOf { it.addedAt }
@@ -46,9 +52,16 @@ data class LibraryState(
     val allBooks: List<Book> = emptyList(),
     val settings: LibrarySettings = LibrarySettings(),
     val query: String = "",
-    val shelf: List<ShelfItem> = emptyList(),
-    val flat: List<Book> = emptyList(),
-    val groups: List<Group> = emptyList(),
+    /** What the shelf shows after grouping, filtering and sorting. */
+    val items: List<ShelfItem> = emptyList(),
+    /** Number of books behind [items]. */
+    val shownCount: Int = 0,
+    /** Language keys and formats present in the library (for the filter menu). */
+    val languages: List<String> = emptyList(),
+    val formats: List<String> = emptyList(),
+    val suggestions: List<SeriesSuggester.Suggestion> = emptyList(),
+    /** The book to offer under 继续阅读. */
+    val current: Book? = null,
 )
 
 /** Sorts Chinese by pinyin order and everything else alphabetically. */
@@ -67,10 +80,10 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     private val converter by lazy { ChineseConverter.get(app) }
 
     val state: StateFlow<LibraryState> = combine(
-        shelf.library.observeBooks(), shelf.settings.library, shelf.settings.reader, query,
-    ) { books, settings, reader, q ->
-        build(books.map { it.forDisplay(reader.toSimplified) }, settings, q)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LibraryState())
+        shelf.library.observeBooks(), shelf.settings.library, shelf.settings.reader, query, shelf.settings.app,
+    ) { books, settings, reader, q, app ->
+        build(books.map { it.forDisplay(reader.toSimplified) }, settings, q, app.dismissedSuggestions)
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LibraryState())
 
     /**
      * Series are matched on their 简体 form, so volumes shown in different scripts (one switched to
@@ -150,28 +163,49 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         events.send(msg)
     }
 
-    private fun build(books: List<Book>, settings: LibrarySettings, q: String): LibraryState {
-        val filtered = if (q.isBlank()) books else books.filter { b ->
+    private fun build(books: List<Book>, settings: LibrarySettings, q: String, dismissed: Set<String>): LibraryState {
+        val searched = if (q.isBlank()) books else books.filter { b ->
             listOfNotNull(b.title, b.author, b.series, b.fileName).any { it.contains(q.trim(), ignoreCase = true) }
         }
-        val sorted = sort(filtered, settings.sort)
-        val base = LibraryState(loaded = true, allBooks = books, settings = settings, query = q)
-        return when (settings.tab) {
-            LibraryTab.SHELF -> base.copy(shelf = stack(sorted, settings))
-            LibraryTab.RECENT_READ -> base.copy(flat = filtered.filter { it.lastOpenedAt != null }.sortedByDescending { it.lastOpenedAt })
-            LibraryTab.RECENT_ADDED -> base.copy(flat = filtered.sortedByDescending { it.addedAt })
-            LibraryTab.FINISHED -> base.copy(flat = sorted.filter { it.finished })
-            LibraryTab.AUTHORS -> base.copy(
-                groups = filtered.groupBy { it.author ?: "未知作者" }
-                    .map { (name, list) -> Group(name, sort(list, SortOrder.TITLE)) }
-                    .sortedWith { a, b -> collator.compare(a.name, b.name) },
-            )
-            LibraryTab.SERIES -> base.copy(
-                groups = filtered.filter { it.series != null }.groupBy { seriesKey(it.series)!! }
-                    .map { (_, list) -> seriesOrder(list).let { Group(it.first().series!!, it) } }
-                    .sortedWith { a, b -> collator.compare(a.name, b.name) },
-            )
+        val filtered = searched.filter { b ->
+            val statusOk = when (settings.status) {
+                StatusFilter.ALL -> true
+                StatusFilter.READING -> b.started && !b.finished
+                StatusFilter.WANT -> b.wantToRead && !b.finished
+                StatusFilter.UNREAD -> !b.started && !b.finished
+                StatusFilter.FINISHED -> b.finished
+            }
+            statusOk && (settings.language == null || b.languageKey() == settings.language) &&
+                (settings.format == null || b.format == settings.format)
         }
+        val sorted = sort(filtered, settings.sort)
+        val items = when (settings.groupBy) {
+            GroupBy.SERIES -> stackSeries(sorted)
+            GroupBy.BOOKS -> sorted.map { ShelfItem.Single(it) }
+            GroupBy.AUTHORS -> {
+                // One stack per author, in the order of their best-ranked book.
+                // Keyed on the 简体 form so 沈書雲 and 沈书云 are one author.
+                val byAuthor = sorted.groupBy { seriesKey(it.author ?: UNKNOWN_AUTHOR)!! }
+                byAuthor.values.map { list -> ShelfItem.Stack(list.first().author ?: UNKNOWN_AUTHOR, list, GroupKind.AUTHOR) }
+                    .let { stacks -> if (settings.sort == SortOrder.TITLE || settings.sort == SortOrder.AUTHOR) stacks.sortedWith { a, b -> collator.compare(a.name, b.name) } else stacks }
+            }
+        }
+        val suggestions = SeriesSuggester.suggest(
+            books.map { SeriesSuggester.Input(it.id, it.title, it.author, it.series, it.seriesManual) },
+            key = { converter.toSimplified(it) },
+        ).filter { it.key !in dismissed }
+        return LibraryState(
+            loaded = true,
+            allBooks = books,
+            settings = settings,
+            query = q,
+            items = items,
+            shownCount = filtered.size,
+            languages = books.mapNotNull { it.languageKey() }.distinct().sorted(),
+            formats = books.map { it.format }.distinct().sorted(),
+            suggestions = suggestions,
+            current = books.filter { it.lastOpenedAt != null && !it.finished }.maxByOrNull { it.lastOpenedAt!! },
+        )
     }
 
     private fun sort(books: List<Book>, order: SortOrder): List<Book> = when (order) {
@@ -183,8 +217,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Series with 2+ books become one stack, placed where its best-ranked volume would be. */
-    private fun stack(sorted: List<Book>, settings: LibrarySettings): List<ShelfItem> {
-        if (!settings.stackSeries) return sorted.map { ShelfItem.Single(it) }
+    private fun stackSeries(sorted: List<Book>): List<ShelfItem> {
         val bySeries = sorted.filter { it.series != null }.groupBy { seriesKey(it.series)!! }
         val placed = mutableSetOf<String>()
         return sorted.mapNotNull { book ->
@@ -196,5 +229,75 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
                 else -> null
             }
         }
+    }
+
+    // ---- Bulk actions (selection mode) ----
+
+    private suspend fun booksById(ids: Collection<Long>) = ids.mapNotNull { shelf.library.get(it) }
+
+    /**
+     * Puts [ids] (in that order) into series [name]; volumes are numbered 1, 2, 3… in that order
+     * unless [keepNumbers] and a book already has a number.
+     */
+    fun assignSeries(ids: List<Long>, name: String?, numbers: List<Double?>) {
+        viewModelScope.launch {
+            val books = booksById(ids)
+            books.forEachIndexed { i, b ->
+                shelf.library.update(b.copy(series = name?.trim()?.ifBlank { null }, seriesIndex = if (name.isNullOrBlank()) null else numbers.getOrNull(i), seriesManual = true))
+            }
+            events.send(if (name.isNullOrBlank()) "已移出系列" else "已把 ${books.size} 本书放进「${name.trim()}」")
+        }
+    }
+
+    fun acceptSuggestion(s: SeriesSuggester.Suggestion, ids: List<Long>, name: String) {
+        viewModelScope.launch {
+            val existing = if (s.joinsExisting) shelf.library.observeBooks().first().filter { seriesKey(it.series) == seriesKey(s.name) } else emptyList()
+            val chosen = s.members.filter { it.id in ids }
+            // Keep detected volume numbers; unnumbered books take the lowest free numbers ("三体" → 1).
+            val used = (existing.mapNotNull { it.seriesIndex } + chosen.mapNotNull { it.index }).toMutableSet()
+            val numbers = chosen.associate { m ->
+                m.id to (m.index ?: generateSequence(1.0) { it + 1 }.first { it !in used }.also { used += it })
+            }
+            booksById(chosen.map { it.id }).forEach { b ->
+                shelf.library.update(b.copy(series = name.trim(), seriesIndex = numbers[b.id], seriesManual = true))
+            }
+            events.send("已整理为系列「${name.trim()}」")
+        }
+    }
+
+    fun dismissSuggestion(s: SeriesSuggester.Suggestion) {
+        viewModelScope.launch {
+            val app = shelf.settings.app.first()
+            shelf.settings.updateApp(app.copy(dismissedSuggestions = app.dismissedSuggestions + s.key))
+        }
+    }
+
+    fun setWantToRead(ids: Collection<Long>, want: Boolean) {
+        viewModelScope.launch { booksById(ids).forEach { shelf.library.update(it.copy(wantToRead = want)) } }
+    }
+
+    fun setFinished(ids: Collection<Long>, finished: Boolean) {
+        viewModelScope.launch {
+            booksById(ids).forEach { shelf.library.update(it.copy(finished = finished, wantToRead = if (finished) false else it.wantToRead)) }
+        }
+    }
+
+    fun deleteAll(ids: Collection<Long>) {
+        viewModelScope.launch {
+            val books = booksById(ids)
+            books.forEach { shelf.library.delete(it) }
+            events.send("已删除 ${books.size} 本书")
+        }
+    }
+
+    fun importScanned(files: List<java.io.File>) {
+        viewModelScope.launch {
+            events.send("正在导入 ${files.size} 本书…")
+            report(shelf.library.importFiles(files))
+        }
+    }
+
+    companion object {
+        const val UNKNOWN_AUTHOR = "未知作者"
     }
 }

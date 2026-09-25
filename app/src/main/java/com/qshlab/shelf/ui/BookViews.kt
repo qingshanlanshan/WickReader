@@ -15,7 +15,12 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -96,12 +101,36 @@ fun formatIndex(i: Double): String = if (i == i.roundToInt().toDouble()) i.round
 
 private fun percent(p: Float): String = if (p <= 0f) "未读" else if (p >= 0.995f) "已读完" else "${(p * 100).roundToInt()}%"
 
+private fun Book.status(): String = when {
+    finished -> "已读完"
+    progress > 0f -> percent(progress)
+    wantToRead -> "想读"
+    else -> "未读"
+}
+
+/** Check mark shown on items while selecting several books. */
+@Composable
+private fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
+    Icon(
+        if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
+        if (selected) "已选" else "未选",
+        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+        modifier = modifier.background(MaterialTheme.colorScheme.surface, CircleShape),
+    )
+}
+
+private fun ShelfItem.Stack.subtitle() = when (kind) {
+    GroupKind.SERIES -> "系列 · ${books.size} 本 · ${books.first().author ?: ""}"
+    GroupKind.AUTHOR -> "作者 · ${books.size} 本"
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun GridBookCell(book: Book, onClick: () -> Unit, onLongClick: () -> Unit, badge: String? = null) {
+fun GridBookCell(book: Book, onClick: () -> Unit, onLongClick: () -> Unit, badge: String? = null, selected: Boolean? = null) {
     Column(Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(6.dp)) {
         Box {
             Cover(book, Modifier.fillMaxWidth())
+            if (selected != null) SelectionMark(selected, Modifier.align(Alignment.TopEnd).padding(4.dp))
             if (badge != null) {
                 Surface(
                     shape = RoundedCornerShape(topStart = 6.dp, bottomEnd = 8.dp),
@@ -119,15 +148,15 @@ fun GridBookCell(book: Book, onClick: () -> Unit, onLongClick: () -> Unit, badge
                 Text(percent(book.progress), Modifier.padding(start = 6.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            Text(book.author ?: "", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(listOfNotNull(if (book.wantToRead) "想读" else null, book.author).joinToString(" · "), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun GridStackCell(stack: ShelfItem.Stack, onClick: () -> Unit) {
-    Column(Modifier.combinedClickable(onClick = onClick).padding(6.dp)) {
+fun GridStackCell(stack: ShelfItem.Stack, onClick: () -> Unit, onLongClick: (() -> Unit)? = null, selected: Boolean? = null) {
+    Column(Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(6.dp)) {
         Box(Modifier.fillMaxWidth()) {
             // Two books peeking out behind the first volume.
             stack.books.drop(1).take(2).reversed().forEachIndexed { i, b ->
@@ -142,26 +171,28 @@ fun GridStackCell(stack: ShelfItem.Stack, onClick: () -> Unit) {
             ) {
                 Text("${stack.books.size} 本", Modifier.padding(horizontal = 7.dp, vertical = 2.dp), color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.labelSmall)
             }
+            if (selected != null) SelectionMark(selected, Modifier.align(Alignment.TopEnd).padding(4.dp))
         }
         Text(stack.name, Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
-        Text("系列 · ${stack.books.first().author ?: ""}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(if (stack.kind == GroupKind.SERIES) "系列 · ${stack.books.first().author ?: ""}" else "作者", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ListBookRow(book: Book, onClick: () -> Unit, onLongClick: () -> Unit) {
+fun ListBookRow(book: Book, onClick: () -> Unit, onLongClick: () -> Unit, selected: Boolean? = null) {
     Row(
         Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (selected != null) SelectionMark(selected, Modifier.padding(end = 10.dp))
         Cover(book, Modifier.width(52.dp), corner = 4.dp, small = true)
         Column(Modifier.weight(1f).padding(start = 14.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(book.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
             Text(book.subtitle(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Progress(book.progress, Modifier.width(96.dp))
-                Text(percent(book.progress), Modifier.padding(start = 8.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(book.status(), Modifier.padding(start = 8.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -169,18 +200,19 @@ fun ListBookRow(book: Book, onClick: () -> Unit, onLongClick: () -> Unit) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ListStackRow(stack: ShelfItem.Stack, onClick: () -> Unit) {
+fun ListStackRow(stack: ShelfItem.Stack, onClick: () -> Unit, onLongClick: (() -> Unit)? = null, selected: Boolean? = null) {
     Row(
-        Modifier.fillMaxWidth().combinedClickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
+        Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (selected != null) SelectionMark(selected, Modifier.padding(end = 10.dp))
         Box(Modifier.width(60.dp)) {
             if (stack.books.size > 1) Cover(stack.books[1], Modifier.width(48.dp).padding(start = 10.dp).offset(y = (-4).dp), corner = 4.dp, small = true)
             Cover(stack.books.first(), Modifier.width(48.dp), corner = 4.dp, small = true)
         }
         Column(Modifier.weight(1f).padding(start = 10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(stack.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
-            Text("系列 · ${stack.books.size} 本 · ${stack.books.first().author ?: ""}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            Text(stack.subtitle(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             Progress(stack.progress, Modifier.width(96.dp))
         }
     }
@@ -188,26 +220,28 @@ fun ListStackRow(stack: ShelfItem.Stack, onClick: () -> Unit) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun CompactBookRow(book: Book, onClick: () -> Unit, onLongClick: () -> Unit) {
+fun CompactBookRow(book: Book, onClick: () -> Unit, onLongClick: () -> Unit, selected: Boolean? = null) {
     Row(
         Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (selected != null) SelectionMark(selected, Modifier.padding(end = 10.dp))
         Column(Modifier.weight(1f)) {
             Text(book.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(book.subtitle(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text(percent(book.progress), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(book.status(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun CompactStackRow(stack: ShelfItem.Stack, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().combinedClickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+fun CompactStackRow(stack: ShelfItem.Stack, onClick: () -> Unit, onLongClick: (() -> Unit)? = null, selected: Boolean? = null) {
+    Row(Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (selected != null) SelectionMark(selected, Modifier.padding(end = 10.dp))
         Column(Modifier.weight(1f)) {
             Text("${stack.name}（${stack.books.size} 本）", style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("系列 · ${stack.books.first().author ?: ""}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            Text(stack.subtitle(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         }
         Box(Modifier.size(8.dp))
     }

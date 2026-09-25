@@ -4,15 +4,19 @@ import android.content.Context
 import java.io.InputStream
 
 /**
- * Traditional → Simplified conversion with the OpenCC t2s dictionaries (assets/opencc, Apache-2.0):
- * longest phrase match first (TSPhrases), then single characters (TSCharacters).
+ * Chinese script conversion with the OpenCC dictionaries (assets/opencc, Apache-2.0): longest phrase
+ * match first, then single characters. [get] converts Traditional → Simplified (the reader's main
+ * use); [simplifiedToTraditional] goes the other way (e.g. for searching 繁體 catalogs).
  */
 class ChineseConverter private constructor(
     private val chars: Map<Char, String>,
     /** First char → phrase lengths starting with it (longest first), so only real candidates are tried. */
     private val phraseLengths: Map<Char, IntArray>,
     private val phrases: Map<String, String>,
+    /** t2s only: decide 著 → 着 from context. */
+    private val zhuRule: Boolean = true,
 ) {
+    /** Converts [text] in this converter's direction (named for the default t2s direction). */
     fun toSimplified(text: String): String {
         if (text.isEmpty()) return text
         val out = StringBuilder(text.length)
@@ -32,7 +36,7 @@ class ChineseConverter private constructor(
                 }
             }
             if (!matched) {
-                out.append(if (c == '著') zhuoOrZhe(text, i) else chars[c] ?: c.toString())
+                out.append(if (zhuRule && c == '著') zhuoOrZhe(text, i) else chars[c] ?: c.toString())
                 i++
             }
         }
@@ -103,6 +107,16 @@ class ChineseConverter private constructor(
                 instance ?: load { name -> context.applicationContext.assets.open("opencc/$name") }.also { instance = it }
             }
 
+        @Volatile private var s2t: ChineseConverter? = null
+
+        /** Simplified → Traditional (call [toSimplified] on it to convert). Loaded on first use. */
+        fun simplifiedToTraditional(context: Context): ChineseConverter =
+            s2t ?: synchronized(this) {
+                s2t ?: load(zhuRule = false, charsFile = "STCharacters.txt", phrasesFile = "STPhrases.txt") { name ->
+                    context.applicationContext.assets.open("opencc/$name")
+                }.also { s2t = it }
+            }
+
         private fun readDict(stream: InputStream): List<Pair<String, String>> =
             stream.bufferedReader().use { it.readLines() }
                 .filter { it.isNotBlank() && !it.startsWith("#") }
@@ -112,14 +126,19 @@ class ChineseConverter private constructor(
                 }
 
         /** [open] returns the named OpenCC dictionary file. */
-        fun load(open: (String) -> InputStream): ChineseConverter {
+        fun load(
+            zhuRule: Boolean = true,
+            charsFile: String = "TSCharacters.txt",
+            phrasesFile: String = "TSPhrases.txt",
+            open: (String) -> InputStream,
+        ): ChineseConverter {
             val chars = HashMap<Char, String>(6000)
-            for ((k, v) in readDict(open("TSCharacters.txt"))) if (k.length == 1) chars[k[0]] = v
+            for ((k, v) in readDict(open(charsFile))) if (k.length == 1) chars[k[0]] = v
             val phrases = HashMap<String, String>(1000)
-            for ((k, v) in readDict(open("TSPhrases.txt"))) if (k.length > 1) phrases[k] = v
+            for ((k, v) in readDict(open(phrasesFile))) if (k.length > 1) phrases[k] = v
             val lengths = phrases.keys.groupBy { it[0] }
                 .mapValues { (_, ks) -> ks.map { it.length }.distinct().sortedDescending().toIntArray() }
-            return ChineseConverter(chars, lengths, phrases)
+            return ChineseConverter(chars, lengths, phrases, zhuRule)
         }
     }
 }

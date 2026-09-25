@@ -24,6 +24,13 @@ TW = [
     "多年以後，有個孩子在廢墟裡撿到一枝筆，筆桿上刻著兩個字：「雲中」。",
     "於是他開始寫，寫那座城，寫那些燈，也寫那些再也回不來的人。",
 ]
+JA = [
+    "朝の霧がまだ晴れないうちに、彼は古い鞄を背負って山道を歩き始めた。",
+    "川の音は小さく、まるで誰かが長い物語を低い声で語っているようだった。",
+    "昼になると、やっと雲の後ろから太陽が顔を出し、山全体が明るく静かになった。",
+    "夜は風が強く、軒下の提灯がいつまでも揺れていた。",
+    "翌日、二人は渡し場で舟を待った。川はとても広く、向こう岸の家は積み木のように小さかった。",
+]
 EN = [
     "The lighthouse stood at the end of a long stone pier, white against the grey water.",
     "Every evening the keeper climbed the spiral stairs, counting them out of habit.",
@@ -56,7 +63,7 @@ def cover_png(path, title, subtitle, colors):
         os.unlink(f.name)
 
 
-def make_epub(out, *, title, author, lang, chapters, extra_meta="", cover=None):
+def make_epub(out, *, title, author, lang, chapters, extra_meta="", cover=None, spine_attr="", css=None, span_wrap=False):
     tmp = tempfile.mkdtemp()
     try:
         os.makedirs(f"{tmp}/META-INF")
@@ -67,16 +74,20 @@ def make_epub(out, *, title, author, lang, chapters, extra_meta="", cover=None):
             '<rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>')
         manifest, spine, nav = [], [], []
         for i, (ctitle, paras) in enumerate(chapters, 1):
-            body = "".join(f"<p>{escape(p)}</p>" for p in paras)
+            body = "".join(f'<p><span class="big">{escape(p)}</span></p>' if span_wrap else f"<p>{escape(p)}</p>" for p in paras)
+            link = '<link rel="stylesheet" type="text/css" href="style.css"/>' if css else ""
             open(f"{tmp}/OEBPS/c{i}.xhtml", "w").write(
                 f'<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="{lang}">'
-                f'<head><title>{escape(ctitle)}</title></head><body><h2>{escape(ctitle)}</h2>{body}</body></html>')
+                f'<head><title>{escape(ctitle)}</title>{link}</head><body><h2>{escape(ctitle)}</h2>{body}</body></html>')
             manifest.append(f'<item id="c{i}" href="c{i}.xhtml" media-type="application/xhtml+xml"/>')
             spine.append(f'<itemref idref="c{i}"/>')
             nav.append(f'<li><a href="c{i}.xhtml">{escape(ctitle)}</a></li>')
         open(f"{tmp}/OEBPS/nav.xhtml", "w").write(
             '<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">'
             f'<head><title>目录</title></head><body><nav epub:type="toc"><ol>{"".join(nav)}</ol></nav></body></html>')
+        if css:
+            open(f"{tmp}/OEBPS/style.css", "w").write(css)
+            manifest.append('<item id="css" href="style.css" media-type="text/css"/>')
         cover_meta = ""
         if cover and cover_png(f"{tmp}/OEBPS/cover.png", *cover):
             manifest.append('<item id="cover" href="cover.png" media-type="image/png" properties="cover-image"/>')
@@ -89,7 +100,7 @@ def make_epub(out, *, title, author, lang, chapters, extra_meta="", cover=None):
 <meta property="dcterms:modified">2026-09-24T00:00:00Z</meta>{cover_meta}{extra_meta}
 </metadata>
 <manifest><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>{"".join(manifest)}</manifest>
-<spine>{"".join(spine)}</spine></package>""")
+<spine{spine_attr}>{"".join(spine)}</spine></package>""")
         with zipfile.ZipFile(out, "w") as z:
             z.write(f"{tmp}/mimetype", "mimetype", compress_type=zipfile.ZIP_STORED)
             for root, _, files in os.walk(tmp):
@@ -129,6 +140,23 @@ def main(out):
               cover=("月下集", "夜读小集 2", ("#7B4B3A", "#C08A6B")))
     make_epub(f"{out}/long-standalone.epub", title="一本没有封面的长书", author="佚名", lang="zh-CN",
               chapters=[(f"第{c}章 长路", paragraphs(CN, 40, c)) for c in range(1, 13)])
+    # No series metadata and no "第N卷": only the title suggester can group these.
+    for i, t in enumerate(["星海", "星海Ⅱ：暗潮", "星海3 远航"], 1):
+        make_epub(f"{out}/xinghai-{i}.epub", title=t, author="周衡", lang="zh-CN",
+                  chapters=[(f"第{c}章", paragraphs(CN, 12, i * 4 + c)) for c in range(1, 4)],
+                  cover=(t.split("：")[0].split(" ")[0], "", ("#1F3A5F", "#4F6D8F")))
+    # Japanese, vertical, right-to-left pages.
+    make_epub(f"{out}/tabiji.epub", title="旅路の記", author="山田 静", lang="ja",
+              chapters=[(f"第{c}章", paragraphs(JA, 14, c)) for c in range(1, 5)],
+              spine_attr=' page-progression-direction="rtl"',
+              css="html{writing-mode:vertical-rl;-epub-writing-mode:vertical-rl}",
+              cover=("旅路の記", "山田 静", ("#8A3B3B", "#C77D6B")))
+    # A publisher stylesheet with heavy, oversized fonts (should be evened out).
+    make_epub(f"{out}/heavy.epub", title="粗体排版测试", author="测试", lang="zh-CN",
+              chapters=[(f"第{c}章", paragraphs(CN, 12, c)) for c in range(1, 3)],
+              css='body{font-family:"KaiTi","STKaiti",fantasy;font-weight:bold;font-size:1.3em;letter-spacing:0.2em}'
+                  'span.big{font-size:22px;font-family:cursive}h2{font-family:fantasy;font-size:40px}',
+              span_wrap=True)
     print("\n".join(sorted(os.listdir(out))))
 
 

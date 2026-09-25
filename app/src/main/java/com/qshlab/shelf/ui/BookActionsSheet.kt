@@ -12,6 +12,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.BookmarkRemove
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -66,6 +68,11 @@ fun BookActionsSheet(
             headlineContent = { Text(if (book.finished) "标记为未读完" else "标记为已读完") },
             leadingContent = { Icon(if (book.finished) Icons.Filled.RadioButtonUnchecked else Icons.Filled.CheckCircle, null) },
             modifier = Modifier.clickable { onSave(book.copy(finished = !book.finished)) },
+        )
+        ListItem(
+            headlineContent = { Text(if (book.wantToRead) "取消想读" else "标记为想读") },
+            leadingContent = { Icon(if (book.wantToRead) Icons.Filled.BookmarkRemove else Icons.Filled.BookmarkAdd, null) },
+            modifier = Modifier.clickable { onSave(book.copy(wantToRead = !book.wantToRead)) },
         )
         ListItem(headlineContent = { Text("删除") }, leadingContent = { Icon(Icons.Filled.Delete, null) }, modifier = Modifier.clickable { confirmDelete = true })
         Column(Modifier.padding(bottom = 24.dp)) {}

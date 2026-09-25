@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import com.qshlab.shelf.chinese.ChineseConverter
+import com.qshlab.shelf.settings.PageLayout
 import com.qshlab.shelf.translate.ChapterTranslator
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Publication
@@ -22,6 +23,37 @@ import org.readium.r2.shared.util.resource.TransformingContainer
 import org.readium.r2.shared.util.resource.map
 import org.readium.r2.shared.util.toUrl
 import org.readium.r2.streamer.PublicationOpener
+
+/**
+ * Makes books look alike when the reader's own layout is on (Readium sets "readium-advanced-on"
+ * then, and "readium-font-on" when a font is chosen): Readium already fixes paragraph sizes; this
+ * also evens out bold body text, sized spans, letter spacing and heading fonts.
+ */
+private const val NORMALIZE_CSS = "<style type=\"text/css\" id=\"shelf-normalize\">" +
+    ":root[style*=readium-advanced-on] body{font-size:1rem!important}" +
+    ":root[style*=readium-advanced-on] :is(body,p,div,li,dd,dt,blockquote,section,article){font-weight:normal!important;letter-spacing:normal!important}" +
+    ":root[style*=readium-advanced-on] :is(span,font,a,em,i,strong,b,blockquote,section,article,td,th){font-size:inherit!important}" +
+    ":root[style*=readium-font-on] :is(h1,h2,h3,h4,h5,h6,blockquote,section,article,td,th,font,a):not([lang]){font-family:inherit!important}" +
+    "</style>"
+
+private fun decodeUtf8(bytes: ByteArray): String? = runCatching {
+    Charsets.UTF_8.newDecoder()
+        .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+        .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+        .decode(java.nio.ByteBuffer.wrap(bytes)).toString()
+}.getOrNull()
+
+/** Books styled vertical-rl by their own CSS, read horizontally. */
+private const val HORIZONTAL_CSS = "<style type=\"text/css\" id=\"shelf-horizontal\">" +
+    "html,body{writing-mode:horizontal-tb!important;-webkit-writing-mode:horizontal-tb!important;-epub-writing-mode:horizontal-tb!important}" +
+    "</style>"
+
+internal fun injectStyle(html: String, layout: PageLayout = PageLayout.HORIZONTAL_LTR): String {
+    val head = html.indexOf("</head>", ignoreCase = true)
+    if (head < 0) return html
+    val extra = if (layout == PageLayout.VERTICAL_RTL) "" else HORIZONTAL_CSS
+    return html.substring(0, head) + NORMALIZE_CSS + extra + html.substring(head)
+}
 
 /** Book formats the reader can open right now. */
 val SUPPORTED_EXTENSIONS = setOf("epub", "txt")
@@ -79,6 +111,14 @@ class LibraryRepository(
             importFile(f, f.name, move = true)
         }
     }
+
+    /** Imports files found by the phone scan (copied; the originals stay where they are). */
+    suspend fun importFiles(files: List<File>): List<ImportResult> = withContext(Dispatchers.IO) {
+        files.map { importFile(it, it.name, move = false) }
+    }
+
+    /** "name:size" of every book, to mark scan results that are already on the shelf. */
+    suspend fun fileKeys(): Set<String> = dao.fileKeys().toSet()
 
     /** Imports a file downloaded from an online catalog. */
     suspend fun importDownloaded(file: File, name: String): ImportResult = withContext(Dispatchers.IO) { importFile(file, name, move = true) }
@@ -145,27 +185,33 @@ class LibraryRepository(
     }
 
     /**
-     * Opens a book file. With [toSimplified], every (X)HTML resource and the table of contents are
-     * converted 繁→简 as they are read; the file itself is never modified.
+     * Opens a book file. Every (X)HTML resource gets the [NORMALIZE_CSS] stylesheet; with
+     * [toSimplified] it and the table of contents are also converted 繁→简 as they are read, and
+     * with a [translator] translated. The file itself is never modified.
      */
-    suspend fun openPublication(file: File, toSimplified: Boolean = false, translator: ChapterTranslator? = null): Publication? {
+    suspend fun openPublication(
+        file: File,
+        toSimplified: Boolean = false,
+        translator: ChapterTranslator? = null,
+        /** Read when each chapter loads (the reader may switch it). */
+        layout: () -> PageLayout = { PageLayout.HORIZONTAL_LTR },
+    ): Publication? {
         val asset = assetRetriever.retrieve(file.toUrl(isDirectory = false)).getOrElse { return null }
         val converter = if (toSimplified) ChineseConverter.get(context) else null
         return publicationOpener.open(asset, allowUserInteraction = false, onCreatePublication = {
-            if (converter != null || translator != null) {
-                container = TransformingContainer(container) { url, resource ->
-                    val path = url.toString().substringBefore('?').lowercase()
-                    if (path.endsWith(".xhtml") || path.endsWith(".html") || path.endsWith(".htm")) {
-                        resource.map { bytes ->
-                            var html = bytes.decodeToString()
-                            if (converter != null) html = converter.htmlToSimplified(html)
-                            // A failed translation (e.g. offline before the model is downloaded) shows the original.
-                            if (translator != null) html = runCatching { translator.translate(path, html) }.getOrDefault(html)
-                            Try.success(html.encodeToByteArray())
-                        }
-                    } else {
-                        resource
+            container = TransformingContainer(container) { url, resource ->
+                val path = url.toString().substringBefore('?').lowercase()
+                if (path.endsWith(".xhtml") || path.endsWith(".html") || path.endsWith(".htm")) {
+                    resource.map { bytes ->
+                        // Leave the rare non-UTF-8 chapter (old GBK / Big5 EPUBs) byte-for-byte alone.
+                        var html = decodeUtf8(bytes) ?: return@map Try.success(bytes)
+                        if (converter != null) html = converter.htmlToSimplified(html)
+                        // A failed translation (e.g. offline before the model is downloaded) shows the original.
+                        if (translator != null) html = runCatching { translator.translate(path, html) }.getOrDefault(html)
+                        Try.success(injectStyle(html, layout()).encodeToByteArray())
                     }
+                } else {
+                    resource
                 }
             }
             if (converter != null) {

@@ -15,13 +15,19 @@ android {
         applicationId = "com.qshlab.shelf"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
         // 64-bit ARM covers practically every phone from the last ~8 years; the ML Kit
         // translation engine alone is ~16 MB per architecture.
         ndk { abiFilters += "arm64-v8a" }
     }
 
+    // Store native libraries compressed: the voice engine's .so shrinks the APK by ~14 MB.
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
     buildFeatures {
         compose = true
     }
@@ -95,6 +101,9 @@ dependencies {
     implementation(libs.readium.opds)
     implementation(libs.mlkit.translate)
     implementation(libs.media3.session)
+    // On-device neural TTS (k2-fsa/sherpa-onnx, Apache-2.0), trimmed to arm64-v8a.
+    implementation(files("libs/sherpa-onnx-1.13.8-arm64.aar"))
+    implementation(libs.commons.compress)
 
     testImplementation(libs.junit)
 }

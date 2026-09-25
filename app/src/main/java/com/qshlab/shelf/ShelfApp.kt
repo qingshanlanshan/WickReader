@@ -10,6 +10,10 @@ import com.qshlab.shelf.data.LibraryRepository
 import com.qshlab.shelf.data.ShelfDatabase
 import com.qshlab.shelf.reader.ReaderRepository
 import com.qshlab.shelf.settings.SettingsRepository
+import com.qshlab.shelf.tts.VoiceManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.shared.util.http.DefaultHttpClient
 import org.readium.r2.streamer.PublicationOpener
@@ -29,6 +33,11 @@ class ShelfApp : Application() {
         private set
     lateinit var catalogs: CatalogRepository
         private set
+    lateinit var voices: VoiceManager
+        private set
+
+    /** For work that outlives a screen (voice downloads). */
+    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()
@@ -48,6 +57,7 @@ class ShelfApp : Application() {
         settings = SettingsRepository(dataStore)
         catalogs = CatalogRepository(dataStore)
         readers = ReaderRepository(library, settings)
+        voices = VoiceManager(this, appScope)
     }
 }
 

@@ -1,6 +1,23 @@
 package com.qshlab.shelf.reader
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
+import com.qshlab.shelf.settings.PageLayout
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -104,6 +121,11 @@ fun ReaderOverlay(
     onDeleteAnnotation: (Annotation) -> Unit,
     onSearch: suspend (String) -> List<SearchHit>,
     onGoToSearchHit: (SearchHit) -> Unit,
+    layout: PageLayout,
+    layoutChoices: List<PageLayout>,
+    onLayoutChange: (PageLayout) -> Unit,
+    settingsOpen: Boolean,
+    onSettingsOpenChange: (Boolean) -> Unit,
 ) {
     val dark = settings.theme == ReaderTheme.DARK
     val colors = if (dark) darkColorScheme() else lightColorScheme(surface = settings.theme.paper())
@@ -114,9 +136,9 @@ fun ReaderOverlay(
     MaterialTheme(colorScheme = colors) {
         Box(Modifier.fillMaxSize()) {
             // Tap outside the bars to close them.
-            if (visible) Box(Modifier.fillMaxSize().clickable(interactionSource = null, indication = null) { onDismiss() })
+            if (visible || settingsOpen) Box(Modifier.fillMaxSize().clickable(interactionSource = null, indication = null) { onSettingsOpenChange(false); onDismiss() })
 
-            AnimatedVisibility(visible, enter = slideInVertically { -it } + fadeIn(), exit = slideOutVertically { -it } + fadeOut()) {
+            AnimatedVisibility(visible && !settingsOpen, enter = slideInVertically { -it } + fadeIn(), exit = slideOutVertically { -it } + fadeOut()) {
                 Surface(tonalElevation = 3.dp, shadowElevation = 4.dp) {
                     Row(
                         Modifier.fillMaxWidth().statusBarsPadding().height(56.dp).padding(horizontal = 4.dp),
@@ -130,13 +152,13 @@ fun ReaderOverlay(
                             Icon(if (bookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, if (bookmarked) "删除书签" else "添加书签")
                         }
                         IconButton(onClick = { sheet = "toc" }) { Icon(Icons.AutoMirrored.Filled.List, "目录") }
-                        IconButton(onClick = { sheet = "settings" }) { Icon(Icons.Filled.TextFields, "阅读设置") }
+                        IconButton(onClick = { onSettingsOpenChange(true) }) { Icon(Icons.Filled.TextFields, "阅读设置") }
                     }
                 }
             }
 
             AnimatedVisibility(
-                visible,
+                visible && !settingsOpen,
                 modifier = Modifier.align(Alignment.BottomCenter),
                 enter = slideInVertically { it } + fadeIn(),
                 exit = slideOutVertically { it } + fadeOut(),
@@ -163,6 +185,25 @@ fun ReaderOverlay(
                     }
                 }
             }
+
+            // Settings as a side panel: the page stays visible on the left while you adjust it.
+            AnimatedVisibility(
+                settingsOpen,
+                modifier = Modifier.align(Alignment.CenterEnd),
+                enter = slideInHorizontally { it } + fadeIn(),
+                exit = slideOutHorizontally { it } + fadeOut(),
+            ) {
+                BoxWithConstraints {
+                    val width = (maxWidth * 0.5f).coerceIn(200.dp, 380.dp)
+                    Surface(Modifier.width(width).fillMaxHeight(), tonalElevation = 2.dp, shadowElevation = 8.dp) {
+                        ReaderSettingsPanel(
+                            settings, onSettingsChange, isTraditional, bookSimplified, onBookSimplifiedChange,
+                            translation, translationLabel, onTranslationChange, layout, layoutChoices, onLayoutChange,
+                            onClose = { onSettingsOpenChange(false) },
+                        )
+                    }
+                }
+            }
         }
 
         if (sheet == "toc") {
@@ -181,14 +222,10 @@ fun ReaderOverlay(
             SearchSheet(onSearch = onSearch, onGo = { sheet = null; onGoToSearchHit(it) }, onDismiss = { sheet = null })
         }
 
-        if (sheet == "settings") {
-            ModalBottomSheet(onDismissRequest = { sheet = null }) {
-                ReaderSettingsPanel(settings, onSettingsChange, isTraditional, bookSimplified, onBookSimplifiedChange, translation, translationLabel, onTranslationChange)
-            }
-        }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ReaderSettingsPanel(
     s: ReaderSettings,
@@ -199,49 +236,93 @@ private fun ReaderSettingsPanel(
     translation: TranslationMode,
     translationLabel: String,
     onTranslationChange: (TranslationMode) -> Unit,
+    layout: PageLayout,
+    layoutChoices: List<PageLayout>,
+    onLayoutChange: (PageLayout) -> Unit,
+    onClose: () -> Unit,
 ) {
     Column(
-        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp).padding(bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text("阅读设置", style = MaterialTheme.typography.titleMedium)
-
-        Label("繁简转换")
-        SwitchRow(if (isTraditional) "本书显示为简体（检测到繁体）" else "本书显示为简体", bookSimplified) { onBookSimplifiedChange(it) }
-        SwitchRow("繁体书默认显示为简体", s.toSimplified) { onChange(s.copy(toSimplified = it)) }
-
-        Label("整本翻译（$translationLabel，离线）")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TranslationMode.entries.forEach { m ->
-                FilterChip(selected = translation == m, onClick = { if (m != translation) onTranslationChange(m) }, label = { Text(m.label) })
-            }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("阅读设置", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            IconButton(onClick = onClose) { Icon(Icons.Filled.Close, "关闭") }
         }
-        HorizontalDivider(Modifier.padding(vertical = 6.dp))
 
         Label("主题")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ReaderTheme.entries.forEach { t ->
-                FilterChip(selected = s.theme == t, onClick = { onChange(s.copy(theme = t)) }, label = { Text(t.label) })
+                val selected = s.theme == t
+                Box(
+                    Modifier.size(40.dp).clip(CircleShape).background(t.paper())
+                        .border(if (selected) 3.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, CircleShape)
+                        .clickable { onChange(s.copy(theme = t)) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(t.label.take(1), color = if (t == ReaderTheme.DARK) Color(0xFFDDDDDD) else Color(0xFF333333), style = MaterialTheme.typography.labelMedium)
+                }
             }
         }
 
-        SliderRow("字号", s.fontSize, 0.6..2.5, { "${(it * 100).roundToInt()}%" }) { onChange(s.copy(fontSize = it)) }
+        Stepper("字号", s.fontSize, 0.6..2.5, 0.1, { "${(it * 100).roundToInt()}%" }) { onChange(s.copy(fontSize = it)) }
 
         Label("字体")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ReaderFont.entries.forEach { f ->
                 FilterChip(selected = s.font == f, onClick = { onChange(s.copy(font = f)) }, label = { Text(f.label) })
             }
         }
 
-        SliderRow("行距", s.lineHeight, 1.0..2.4, { "%.1f".format(it) }, enabled = !s.publisherStyles) { onChange(s.copy(lineHeight = it)) }
-        SliderRow("页边距", s.pageMargins, 0.3..2.5, { "%.1f".format(it) }, enabled = !s.publisherStyles) { onChange(s.copy(pageMargins = it)) }
+        Stepper("行距", s.lineHeight, 1.0..2.4, 0.1, { "%.1f".format(it) }, enabled = !s.publisherStyles) { onChange(s.copy(lineHeight = it)) }
+        Stepper("页边距", s.pageMargins, 0.2..2.5, 0.1, { "%.1f".format(it) }, enabled = !s.publisherStyles) { onChange(s.copy(pageMargins = it)) }
+
+        if (layoutChoices.size > 1) Label("版式（本书）")
+        if (layoutChoices.size > 1) layoutChoices.forEach { l ->
+            Row(Modifier.fillMaxWidth().clickable { if (l != layout) onLayoutChange(l) }.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(selected = l == layout, onClick = { if (l != layout) onLayoutChange(l) })
+                Text(l.label, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
 
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
-        SwitchRow("滚动阅读（关闭为翻页）", s.scroll) { onChange(s.copy(scroll = it)) }
-        SwitchRow("竖排（中文 / 日文书）", s.verticalText) { onChange(s.copy(verticalText = it)) }
+        SwitchRow("滚动阅读", s.scroll) { onChange(s.copy(scroll = it)) }
         SwitchRow("使用书籍自带排版", s.publisherStyles) { onChange(s.copy(publisherStyles = it)) }
         SwitchRow("音量键翻页", s.volumeKeysTurnPages) { onChange(s.copy(volumeKeysTurnPages = it)) }
+
+        HorizontalDivider(Modifier.padding(vertical = 6.dp))
+        Label("繁简转换")
+        SwitchRow(if (isTraditional) "本书显示为简体（检测到繁体）" else "本书显示为简体", bookSimplified) { onBookSimplifiedChange(it) }
+        SwitchRow("繁体书默认显示为简体", s.toSimplified) { onChange(s.copy(toSimplified = it)) }
+
+        Label("整本翻译（$translationLabel，离线）")
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            TranslationMode.entries.forEach { m ->
+                FilterChip(selected = translation == m, onClick = { if (m != translation) onTranslationChange(m) }, label = { Text(m.label) })
+            }
+        }
+    }
+}
+
+/** A value with −/+ buttons: each tap applies at once, so the page reflows while you watch. */
+@Composable
+private fun Stepper(
+    label: String,
+    value: Double,
+    range: ClosedFloatingPointRange<Double>,
+    step: Double,
+    format: (Double) -> String,
+    enabled: Boolean = true,
+    onChange: (Double) -> Unit,
+) {
+    fun snap(v: Double) = (Math.round(v / step) * step).coerceIn(range.start, range.endInclusive)
+    Column(Modifier.padding(top = 6.dp)) {
+        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            FilledTonalIconButton(onClick = { onChange(snap(value - step)) }, enabled = enabled && value > range.start + 1e-6) { Icon(Icons.Filled.Remove, "减小") }
+            Text(format(value), Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.titleSmall)
+            FilledTonalIconButton(onClick = { onChange(snap(value + step)) }, enabled = enabled && value < range.endInclusive - 1e-6) { Icon(Icons.Filled.Add, "增大") }
+        }
     }
 }
 
@@ -251,36 +332,9 @@ private fun Label(text: String) {
 }
 
 @Composable
-private fun SliderRow(
-    label: String,
-    value: Double,
-    range: ClosedFloatingPointRange<Double>,
-    format: (Double) -> String,
-    enabled: Boolean = true,
-    onChange: (Double) -> Unit,
-) {
-    // Local state while dragging; the setting is saved when the finger lifts.
-    var local by remember { mutableFloatStateOf(value.toFloat()) }
-    LaunchedEffect(value) { local = value.toFloat() }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.width(56.dp), style = MaterialTheme.typography.bodyMedium)
-        Slider(
-            value = local,
-            onValueChange = { local = it },
-            onValueChangeFinished = { onChange(local.toDouble()) },
-            valueRange = range.start.toFloat()..range.endInclusive.toFloat(),
-            enabled = enabled,
-            modifier = Modifier.weight(1f),
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(format(local.toDouble()), Modifier.width(48.dp), style = MaterialTheme.typography.bodySmall)
-    }
-}
-
-@Composable
 private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Text(label, Modifier.weight(1f).padding(end = 6.dp), style = MaterialTheme.typography.bodyMedium)
         Switch(checked = checked, onCheckedChange = onChange)
     }
 }

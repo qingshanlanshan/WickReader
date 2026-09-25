@@ -4,9 +4,12 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import android.content.Context
+import com.qshlab.shelf.chinese.ChineseConverter
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLDecoder
 import java.net.URLEncoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -46,29 +49,74 @@ class CatalogRepository(private val store: DataStore<Preferences>) {
 }
 
 sealed interface FeedResult {
-    data class Loaded(val feed: Feed, val searchTemplate: String?) : FeedResult
+    data class Loaded(
+        val feed: Feed,
+        val searchTemplate: String?,
+        /** Quick links shown above the feed, e.g. Gutenberg's Chinese / Japanese books. */
+        val shortcuts: List<Pair<String, String>> = emptyList(),
+    ) : FeedResult
     data class Failed(val message: String) : FeedResult
 }
 
 object Opds {
-    suspend fun load(url: String): FeedResult {
+    private const val GUTENBERG_SEARCH = "https://www.gutenberg.org/ebooks/search.opds/?query="
+
+    suspend fun load(context: Context, url: String): FeedResult {
+        val first = loadOnce(url)
+        // Gutenberg catalogs Chinese books in 繁體 (sometimes 简体): searchUrl() sent the 繁體 form,
+        // so if that finds nothing, try the 简体 one.
+        val query = gutenbergQuery(url)
+        if (query != null && query.any(::isCjk) && (first as? FeedResult.Loaded)?.isEmpty() != false) {
+            val simplified = ChineseConverter.get(context).toSimplified(query)
+            if (simplified != query) (loadOnce(GUTENBERG_SEARCH + URLEncoder.encode(simplified, "UTF-8")) as? FeedResult.Loaded)
+                ?.takeIf { !it.isEmpty() }?.let { return it }
+        }
+        if (query != null && (first as? FeedResult.Loaded)?.isEmpty() != false) {
+            return FeedResult.Failed("没有找到「$query」。古腾堡的书名多为英文或繁体中文，可以试试作者名、拼音或英文书名。")
+        }
+        return first
+    }
+
+    private suspend fun loadOnce(url: String): FeedResult {
         val parsed = OPDS1Parser.parseUrlString(url).getOrNull()
             ?: return FeedResult.Failed("无法打开这个书库（请检查网络或地址）")
-        val feed = parsed.feed ?: return FeedResult.Failed("这个地址不是 OPDS 书库")
+        // Gutenberg answers an empty search with one "No records found." pseudo-entry.
+        val feed = parsed.feed?.let { f ->
+            f.copy(
+                navigation = f.navigation.filter { it.title != "No records found." },
+                publications = f.publications.filter { it.metadata.title != "No records found." },
+            )
+        } ?: return FeedResult.Failed("这个地址不是 OPDS 书库")
         val template = runCatching { OPDS1Parser.retrieveOpenSearchTemplate(feed).getOrNull() }.getOrNull()
             ?: gutenbergSearch(url)
-        return FeedResult.Loaded(feed, template)
+        val shortcuts = if (url.trimEnd('/').endsWith("gutenberg.org/ebooks.opds")) {
+            listOf("中文书" to GUTENBERG_SEARCH + "l.zh", "日文书" to GUTENBERG_SEARCH + "l.ja")
+        } else {
+            emptyList()
+        }
+        return FeedResult.Loaded(feed, template, shortcuts)
     }
+
+    private fun FeedResult.Loaded.isEmpty() =
+        feed.publications.isEmpty() && feed.navigation.isEmpty() && feed.groups.all { it.publications.isEmpty() && it.navigation.isEmpty() }
+
+    private fun isCjk(c: Char) = c.code in 0x3400..0x9fff
+
+    private fun gutenbergQuery(url: String): String? =
+        if (url.startsWith(GUTENBERG_SEARCH)) URLDecoder.decode(url.removePrefix(GUTENBERG_SEARCH).substringBefore('&'), "UTF-8") else null
 
     /** Gutenberg's OpenSearch description is sometimes slow; its search URL is stable. */
     private fun gutenbergSearch(url: String) =
-        if ("gutenberg.org" in url) "https://www.gutenberg.org/ebooks/search.opds/?query={searchTerms}" else null
+        if ("gutenberg.org" in url) "$GUTENBERG_SEARCH{searchTerms}" else null
 
-    fun searchUrl(template: String, query: String): String =
-        template.replace("{searchTerms}", URLEncoder.encode(query, "UTF-8"))
+    fun searchUrl(context: Context, template: String, query: String): String {
+        // Gutenberg's Chinese titles are mostly 繁體 and its search doesn't fold scripts.
+        val q = if ("gutenberg.org" in template && query.any(::isCjk)) ChineseConverter.simplifiedToTraditional(context).toSimplified(query) else query
+        return template.replace("{searchTerms}", URLEncoder.encode(q, "UTF-8"))
             // Drop optional OpenSearch parameters such as {startPage?}. (Android's regex engine
             // needs the closing brace escaped.)
             .replace(Regex("\\{[^\\}]+\\?\\}"), "")
+    }
 
     /** Resolves a feed link against the feed's own URL. */
     fun resolve(link: Link, base: Url): String? {

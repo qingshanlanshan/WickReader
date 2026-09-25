@@ -1,11 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Read aloud in the background (media playback foreground service). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- "Scan the phone for e-books": all-files access on Android 11+, plain read access before. -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <!-- To list installed dictionary / translation apps for selected text. -->
     <queries>
@@ -51,6 +59,9 @@
         </activity>
         <activity
             android:name=".reader.ReaderActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.SettingsActivity"
             android:exported="false" />
         <service
             android:name=".reader.ReadAloudService"

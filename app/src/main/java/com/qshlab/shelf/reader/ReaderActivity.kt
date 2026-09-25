@@ -45,7 +45,14 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.readium.navigator.media.tts.AndroidTtsNavigator
+import com.qshlab.shelf.chinese.ChineseConverter
+import com.qshlab.shelf.data.languageKey
+import com.qshlab.shelf.settings.PageLayout
+import com.qshlab.shelf.tts.AiTtsEngineProvider
+import com.qshlab.shelf.tts.AiTtsPreferences
+import com.qshlab.shelf.tts.AiVoiceId
+import com.qshlab.shelf.tts.VoiceCatalog
+import com.qshlab.shelf.tts.baseLanguage
 import org.readium.navigator.media.tts.TtsNavigator
 import org.readium.navigator.media.tts.TtsNavigatorFactory
 import org.readium.navigator.media.tts.android.AndroidTtsEngine
@@ -79,8 +86,19 @@ class ReaderActivity : FragmentActivity() {
     private var locator by mutableStateOf<Locator?>(null)
     private var lookupText by mutableStateOf<String?>(null)
 
+    private var layout by mutableStateOf(PageLayout.HORIZONTAL_LTR)
+    private var settingsOpen by mutableStateOf(false)
+
+    /** The active read-aloud navigator: AI voices (sherpa-onnx) or the phone's TTS engine. */
+    private class ReadAloud(
+        val navigator: TtsNavigator<*, *, *, *>,
+        val ai: Boolean,
+        val applySettings: (ReaderSettings) -> Unit,
+    )
+
     // Read-aloud (TTS) state.
-    private var tts: AndroidTtsNavigator? = null
+    private var tts: ReadAloud? = null
+    private var ttsLocator: Locator? = null
     private var ttsJob: Job? = null
     private var ttsActive by mutableStateOf(false)
     private var ttsPlaying by mutableStateOf(false)
@@ -147,12 +165,14 @@ class ReaderActivity : FragmentActivity() {
             return
         }
         session = opened
+        layout = opened.layout
+        settingsOpen = intent.getBooleanExtra(EXTRA_SETTINGS_OPEN, false)
         // One small blocking read so the first page renders with the user's settings.
         settings = runBlocking { shelfApp.settings.reader.first() }
 
         supportFragmentManager.fragmentFactory = session.navigatorFactory.createFragmentFactory(
             initialLocator = session.initialLocator,
-            initialPreferences = settings.toEpubPreferences(),
+            initialPreferences = settings.toEpubPreferences(layout),
             listener = object : EpubNavigatorFragment.Listener {
                 override fun onExternalLinkActivated(url: AbsoluteUrl) {
                     runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url.toString()))) }
@@ -193,6 +213,11 @@ class ReaderActivity : FragmentActivity() {
                     onDeleteAnnotation = { a -> lifecycleScope.launch { shelfApp.annotations.delete(a.id) } },
                     onSearch = ::search,
                     onGoToSearchHit = ::goToSearchHit,
+                    layout = layout,
+                    layoutChoices = if (session.book.isCjk()) PageLayout.entries else listOf(PageLayout.HORIZONTAL_LTR),
+                    onLayoutChange = ::changeLayout,
+                    settingsOpen = settingsOpen,
+                    onSettingsOpenChange = { settingsOpen = it; if (it) setOverlay(false) },
                 )
                 editingHighlight?.let { a ->
                     HighlightSheet(
@@ -209,9 +234,9 @@ class ReaderActivity : FragmentActivity() {
                             playing = ttsPlaying,
                             speed = settings.ttsSpeed,
                             voices = ttsVoices,
-                            onPlayPause = { tts?.let { if (ttsPlaying) it.pause() else it.play() } },
-                            onPrevious = { tts?.skipToPreviousUtterance() },
-                            onNext = { tts?.skipToNextUtterance() },
+                            onPlayPause = { tts?.navigator?.let { if (ttsPlaying) it.pause() else it.play() } },
+                            onPrevious = { tts?.navigator?.skipToPreviousUtterance() },
+                            onNext = { tts?.navigator?.skipToNextUtterance() },
                             onSpeed = { v -> lifecycleScope.launch { shelfApp.settings.updateReader(settings.copy(ttsSpeed = v)) } },
                             onVoice = ::chooseVoice,
                             onStop = ::stopTts,
@@ -235,9 +260,25 @@ class ReaderActivity : FragmentActivity() {
         navigator = supportFragmentManager.findFragmentByTag(NAVIGATOR_TAG) as EpubNavigatorFragment
 
         // Tapping the left/right edges turns pages; tapping the middle toggles the menus.
-        navigator.addInputListener(DirectionalNavigationAdapter(navigator, animatedTransition = true))
+        val pageTaps = DirectionalNavigationAdapter(navigator, animatedTransition = true)
         navigator.addInputListener(object : InputListener {
             override fun onTap(event: TapEvent): Boolean {
+                if (layout != PageLayout.VERTICAL_RTL) return pageTaps.onTap(event)
+                // Readium lays vertical text out as one sideways scroll: the left edge moves on.
+                val width = navigator.publicationView.width
+                return when {
+                    event.point.x < width * 0.3f -> true.also { turnVertical(forward = true) }
+                    event.point.x > width * 0.7f -> true.also { turnVertical(forward = false) }
+                    else -> false
+                }
+            }
+
+            override fun onKey(event: org.readium.r2.navigator.input.KeyEvent) =
+                if (layout != PageLayout.VERTICAL_RTL) pageTaps.onKey(event) else false
+        })
+        navigator.addInputListener(object : InputListener {
+            override fun onTap(event: TapEvent): Boolean {
+                if (settingsOpen) { settingsOpen = false; return true }
                 setOverlay(!overlayVisible)
                 return true
             }
@@ -268,8 +309,8 @@ class ReaderActivity : FragmentActivity() {
                 launch {
                     shelfApp.settings.reader.collect { s ->
                         settings = s
-                        navigator.submitPreferences(s.toEpubPreferences())
-                        tts?.submitPreferences(s.toTtsPreferences())
+                        navigator.submitPreferences(s.toEpubPreferences(layout))
+                        tts?.applySettings?.invoke(s)
                         applySystemBars()
                         // The global 繁→简 default changed in a way that affects this book.
                         val book = shelfApp.library.get(bookId)
@@ -359,33 +400,65 @@ class ReaderActivity : FragmentActivity() {
         }
     }
 
+    /** The book's language for speech: "zh", "en", "ja", … */
+    private fun speechLanguage(): String = baseLanguage(session.book.languageKey()) ?: "en"
+
     private fun ReaderSettings.toTtsPreferences() = AndroidTtsPreferences(
         speed = ttsSpeed,
-        voices = ttsVoices.mapNotNull { (lang, id) -> Language(lang) to AndroidTtsEngine.Voice.Id(id) }.toMap().ifEmpty { null },
+        voices = ttsVoices.filterValues { !it.startsWith("ai:") && it != SYSTEM_VOICE }
+            .map { (lang, id) -> Language(lang) to AndroidTtsEngine.Voice.Id(id) }.toMap().ifEmpty { null },
     )
 
-    /** Starts reading aloud from the first sentence on screen. */
-    private fun startTts() {
+    private fun ReaderSettings.toAiPreferences() = AiTtsPreferences(
+        language = Language(speechLanguage()),
+        speed = ttsSpeed,
+        voices = ttsVoices.mapNotNull { (lang, id) -> AiVoiceId.parse(id)?.let { lang to it } }.toMap(),
+    )
+
+    /** AI voice unless the user picked a system voice, or no AI model reads this language. */
+    private suspend fun wantsAiVoice(): Boolean {
+        val lang = speechLanguage()
+        val voices = shelfApp.voices
+        val chosen = settings.ttsVoices[lang]
+        if (chosen != null) return AiVoiceId.parse(chosen)?.let { it.modelId in voices.installed.value } ?: false
+        return shelfApp.settings.app.first().preferAiVoice && voices.modelsFor(lang).isNotEmpty()
+    }
+
+    /** Starts reading aloud from [from], or from the first sentence on screen. */
+    private fun startTts(from: Locator? = null) {
         setOverlay(false)
-        if (tts != null) { tts?.play(); return }
+        if (tts != null) { tts?.navigator?.play(); return }
         lifecycleScope.launch {
-            val factory = TtsNavigatorFactory(application, session.publication)
-            if (factory == null) {
-                Toast.makeText(this@ReaderActivity, "这本书不支持朗读", Toast.LENGTH_SHORT).show()
-                return@launch
+            val start = from ?: navigator.firstVisibleElementLocator()
+            val listener = object : TtsNavigator.Listener {
+                override fun onStopRequested() = stopTts()
             }
-            val start = navigator.firstVisibleElementLocator()
-            val nav = factory.createNavigator(
-                listener = object : TtsNavigator.Listener {
-                    override fun onStopRequested() = stopTts()
-                },
-                initialLocator = start,
-                initialPreferences = settings.toTtsPreferences(),
-            ).getOrElse {
-                Toast.makeText(this@ReaderActivity, "无法启动朗读：${it.message}", Toast.LENGTH_LONG).show()
-                return@launch
+            var handle: ReadAloud? = null
+            if (wantsAiVoice()) {
+                Toast.makeText(this@ReaderActivity, "正在加载 AI 语音…", Toast.LENGTH_SHORT).show()
+                val provider = AiTtsEngineProvider(shelfApp.voices, ChineseConverter.get(this@ReaderActivity))
+                val nav = TtsNavigatorFactory(application, session.publication, provider)
+                    ?.createNavigator(listener, start, settings.toAiPreferences())?.getOrNull()
+                if (nav != null) {
+                    handle = ReadAloud(nav, ai = true) { s -> nav.submitPreferences(s.toAiPreferences()) }
+                } else {
+                    Toast.makeText(this@ReaderActivity, "AI 语音加载失败，改用手机自带语音", Toast.LENGTH_LONG).show()
+                }
             }
-            tts = nav
+            if (handle == null) {
+                val factory = TtsNavigatorFactory(application, session.publication)
+                if (factory == null) {
+                    Toast.makeText(this@ReaderActivity, "这本书不支持朗读", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                val nav = factory.createNavigator(listener, start, settings.toTtsPreferences()).getOrElse {
+                    Toast.makeText(this@ReaderActivity, "无法启动朗读：${it.message}", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+                handle = ReadAloud(nav, ai = false) { s -> nav.submitPreferences(s.toTtsPreferences()) }
+            }
+            val nav = handle.navigator
+            tts = handle
             ttsActive = true
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             // Keeps reading with the screen off / in the background, with lock-screen controls.
@@ -396,6 +469,7 @@ class ReaderActivity : FragmentActivity() {
             ttsJob = lifecycleScope.launch {
                 launch {
                     nav.location.collect { loc ->
+                        ttsLocator = loc.utteranceLocator
                         // Highlight the sentence being read and keep it on screen.
                         navigator.applyDecorations(
                             listOf(Decoration("tts", loc.utteranceLocator, Decoration.Style.Highlight(tint = Color.argb(255, 255, 214, 102)))),
@@ -419,37 +493,74 @@ class ReaderActivity : FragmentActivity() {
     }
 
     private fun refreshVoices() {
-        val nav = tts ?: return
-        val bookLang = session.book.language?.substringBefore('-')?.lowercase()
-        val chosen = settings.ttsVoices.values.toSet()
-        ttsVoices = nav.voices
-            .filter { bookLang == null || it.language.code.substringBefore('-').lowercase() == bookLang || (bookLang == "zh" && it.language.code.startsWith("cmn")) }
-            .sortedWith(compareByDescending<AndroidTtsEngine.Voice> { it.quality.ordinal }.thenBy { it.id.value })
-            .map { v ->
+        val handle = tts ?: return
+        val lang = speechLanguage()
+        val chosen = settings.ttsVoices[lang]
+        val options = mutableListOf<VoiceOption>()
+        val installed = shelfApp.voices.installed.value
+        VoiceCatalog.models.filter { it.id in installed && lang in it.languages }.forEach { m ->
+            val defaultSid = m.defaults[lang]
+            m.speakersFor(lang).forEach { sp ->
+                val id = AiVoiceId(m.id, sp.sid).toString()
+                val selected = handle.ai && (id == chosen || (chosen == null && sp.sid == defaultSid && m == shelfApp.voices.modelsFor(lang).first()))
+                options += VoiceOption(id, "AI · ${m.title.substringBefore('（')} · ${sp.name}", selected)
+            }
+        }
+        if (handle.ai) {
+            options += VoiceOption(SYSTEM_VOICE, "使用手机自带语音", false)
+        } else {
+            @Suppress("UNCHECKED_CAST")
+            val system = (handle.navigator.voices as Set<AndroidTtsEngine.Voice>)
+                .filter { baseLanguage(it.language.code) == lang }
+                .sortedWith(compareByDescending<AndroidTtsEngine.Voice> { it.quality.ordinal }.thenBy { it.id.value })
+            options += system.map { v ->
                 val quality = when (v.quality) {
                     AndroidTtsEngine.Voice.Quality.Highest, AndroidTtsEngine.Voice.Quality.High -> "高质量"
                     AndroidTtsEngine.Voice.Quality.Normal -> "普通"
                     else -> "较低"
                 }
-                VoiceOption(v.id.value, "${v.language.locale.displayName} · $quality${if (v.requiresNetwork) " · 需联网" else ""}\n${v.id.value}", v.id.value in chosen)
+                VoiceOption(v.id.value, "系统 · ${v.language.locale.displayName} · $quality${if (v.requiresNetwork) " · 需联网" else ""}\n${v.id.value}", v.id.value == chosen)
             }
+        }
+        if (VoiceCatalog.models.none { it.id in installed && lang in it.languages }) {
+            options.add(0, VoiceOption(DOWNLOAD_VOICES, if (VoiceCatalog.models.any { lang in it.languages }) "⬇ 下载更自然的 AI 语音…" else "⬇ AI 语音暂不支持这种语言", false))
+        }
+        ttsVoices = options
     }
 
     private fun chooseVoice(id: String) {
-        val voice = tts?.voices?.firstOrNull { it.id.value == id } ?: return
+        if (id == DOWNLOAD_VOICES) {
+            startActivity(Intent(this, com.qshlab.shelf.ui.SettingsActivity::class.java))
+            return
+        }
+        val handle = tts ?: return
+        val lang = speechLanguage()
+        val switchesEngine = (AiVoiceId.parse(id) != null) != handle.ai
         lifecycleScope.launch {
-            shelfApp.settings.updateReader(settings.copy(ttsVoices = settings.ttsVoices + (voice.language.code to id)))
-            refreshVoices()
+            val systemLang = if (!handle.ai && id != SYSTEM_VOICE) {
+                @Suppress("UNCHECKED_CAST")
+                (handle.navigator.voices as Set<AndroidTtsEngine.Voice>).firstOrNull { it.id.value == id }?.language?.code
+            } else null
+            val updated = settings.copy(ttsVoices = settings.ttsVoices + (lang to id) + listOfNotNull(systemLang?.let { it to id }))
+            shelfApp.settings.updateReader(updated)
+            settings = updated
+            if (switchesEngine) {
+                val from = ttsLocator
+                stopTts()
+                startTts(from)
+            } else {
+                refreshVoices()
+            }
         }
     }
 
     private fun onTtsError(error: TtsNavigator.Error) {
-        val engineError = (error as? TtsNavigator.Error.EngineError<*>)?.cause as? AndroidTtsEngine.Error
-        if (engineError is AndroidTtsEngine.Error.LanguageMissingData) {
+        val cause = (error as? TtsNavigator.Error.EngineError<*>)?.cause
+        if (cause is AndroidTtsEngine.Error.LanguageMissingData) {
             Toast.makeText(this, "手机缺少这种语言的语音数据，请在系统中下载", Toast.LENGTH_LONG).show()
             runCatching { startActivity(Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA)) }
         } else {
-            Toast.makeText(this, "朗读出错：${error.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "朗读出错：${cause?.message ?: error.message}", Toast.LENGTH_LONG).show()
         }
         stopTts()
     }
@@ -458,12 +569,34 @@ class ReaderActivity : FragmentActivity() {
         if (tts != null) ReadAloudService.stop(this)
         ttsJob?.cancel()
         ttsJob = null
-        tts?.close()
+        tts?.navigator?.close()
         tts = null
         ttsActive = false
         ttsPlaying = false
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         lifecycleScope.launch { navigator.applyDecorations(emptyList(), "tts") }
+    }
+
+    /**
+     * Vertical text: scrolls one screen within the chapter (forward is leftwards), and only moves
+     * to the next / previous chapter at its edge. (Readium's goForward would skip to the next chapter.)
+     */
+    private fun turnVertical(forward: Boolean) {
+        lifecycleScope.launch {
+            val result = runCatching { navigator.evaluateJavascript(VERTICAL_SCROLL_JS.replace("DIR", if (forward) "1" else "-1")) }.getOrNull()
+            if (result == null || "edge" in result) {
+                if (forward) navigator.goForward(animated = false) else navigator.goBackward(animated = false)
+            }
+        }
+    }
+
+    /** Reopens the book: horizontal vs vertical text is applied as chapters are read. */
+    private fun changeLayout(l: PageLayout) {
+        lifecycleScope.launch {
+            val book = shelfApp.library.get(bookId) ?: return@launch
+            shelfApp.library.update(book.copy(pageLayout = l.name))
+            reload()
+        }
     }
 
     private fun setTranslation(mode: TranslationMode) {
@@ -497,7 +630,8 @@ class ReaderActivity : FragmentActivity() {
             shelfApp.readers.close(bookId)
             shelfApp.readers.open(bookId)
                 .onSuccess {
-                    startActivity(intent(this@ReaderActivity, bookId))
+                    // Keep the settings panel open if the change came from it.
+                    startActivity(intent(this@ReaderActivity, bookId).putExtra(EXTRA_SETTINGS_OPEN, settingsOpen))
                     finish()
                     @Suppress("DEPRECATION") overridePendingTransition(0, 0)
                 }
@@ -530,7 +664,12 @@ class ReaderActivity : FragmentActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (::navigator.isInitialized && settings.volumeKeysTurnPages && !overlayVisible) {
+        // While reading aloud the volume keys change the volume.
+        if (::navigator.isInitialized && settings.volumeKeysTurnPages && !overlayVisible && tts == null) {
+            if (layout == PageLayout.VERTICAL_RTL && (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP)) {
+                turnVertical(forward = keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
+                return true
+            }
             when (keyCode) {
                 KeyEvent.KEYCODE_VOLUME_DOWN -> return true.also { navigator.goForward(animated = true) }
                 KeyEvent.KEYCODE_VOLUME_UP -> return true.also { navigator.goBackward(animated = true) }
@@ -546,18 +685,31 @@ class ReaderActivity : FragmentActivity() {
 
     override fun onDestroy() {
         if (tts != null) ReadAloudService.stop(this)
-        tts?.close()
+        tts?.navigator?.close()
+        // Frees the voice model's memory once the book is closed (not on a 繁简 / translation reload).
+        if (isFinishing && !reloading) shelfApp.voices.release()
         super.onDestroy()
         if (isFinishing && ::session.isInitialized) shelfApp.readers.close(bookId, only = session)
     }
 
     companion object {
         private const val EXTRA_BOOK_ID = "bookId"
+        private const val EXTRA_SETTINGS_OPEN = "settingsOpen"
         private const val NAVIGATOR_TAG = "navigator"
         private const val MENU_LOOKUP = 1001
         private const val MENU_COPY = 1002
         private const val MENU_HIGHLIGHT = 1003
         private const val MENU_NOTE = 1004
+        private const val SYSTEM_VOICE = "system"
+
+        /** Scrolls a vertical-rl chapter by one screen; answers "moved" or "edge". */
+        private const val VERTICAL_SCROLL_JS = """(function(dir) {
+            var se = document.scrollingElement || document.documentElement;
+            var before = se.scrollLeft;
+            se.scrollLeft = before - dir * Math.round(window.innerWidth * 0.94);
+            return Math.abs(se.scrollLeft - before) > 1 ? "moved" : "edge";
+        })(DIR)"""
+        private const val DOWNLOAD_VOICES = "download"
 
         fun intent(context: Context, bookId: Long) =
             Intent(context, ReaderActivity::class.java).putExtra(EXTRA_BOOK_ID, bookId)

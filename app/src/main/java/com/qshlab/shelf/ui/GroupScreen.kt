@@ -10,6 +10,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -29,14 +30,20 @@ enum class GroupKind { SERIES, AUTHOR }
 fun GroupScreen(vm: LibraryViewModel, kind: GroupKind, name: String, onBack: () -> Unit, onOpenBook: (Book) -> Unit) {
     val state by vm.state.collectAsState()
     var actionsFor by remember { mutableStateOf<Book?>(null) }
+    var organizing by remember { mutableStateOf(false) }
     val books = when (kind) {
         GroupKind.SERIES -> vm.seriesKey(name).let { key -> seriesOrder(state.allBooks.filter { vm.seriesKey(it.series) == key }) }
-        GroupKind.AUTHOR -> state.allBooks.filter { (it.author ?: "未知作者") == name }.sortedBy { it.title }
+        GroupKind.AUTHOR -> vm.seriesKey(name).let { key -> state.allBooks.filter { vm.seriesKey(it.author ?: LibraryViewModel.UNKNOWN_AUTHOR) == key }.sortedBy { it.title } }
     }
     Scaffold(
         topBar = {
             TopAppBar(
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
+                actions = {
+                    if (kind == GroupKind.SERIES && books.isNotEmpty()) {
+                        TextButton(onClick = { organizing = true }) { Text("整理") }
+                    }
+                },
                 title = {
                     Column {
                         Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -53,9 +60,22 @@ fun GroupScreen(vm: LibraryViewModel, kind: GroupKind, name: String, onBack: () 
         Column(Modifier.padding(padding)) {
             ShelfItems(
                 books.map { ShelfItem.Single(it) }, state.settings.viewMode, onOpenBook, {},
+                onLongPress = { actionsFor = it },
                 badge = { b -> if (kind == GroupKind.SERIES) b.seriesIndex?.let { "第${formatIndex(it)}卷" } else null },
-            ) { actionsFor = it }
+            )
         }
+    }
+    if (organizing) {
+        SeriesDialog(
+            books = books,
+            existingSeries = emptyList(),
+            onDismiss = { organizing = false },
+            onConfirm = { newName, ordered, numbers ->
+                vm.assignSeries(ordered.map { it.id }, newName, numbers)
+                organizing = false
+                if (newName == null || vm.seriesKey(newName) != vm.seriesKey(name)) onBack()
+            },
+        )
     }
     actionsFor?.let { book ->
         BookActionsSheet(

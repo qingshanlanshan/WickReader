@@ -1,6 +1,7 @@
 package com.qshlab.shelf.data
 
 import androidx.room.AutoMigration
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -43,7 +44,30 @@ data class Book(
     val convertToSimplified: Boolean? = null,
     /** TranslationMode name (BILINGUAL / TRANSLATED); null = off. Added in schema v2. */
     val translationMode: String? = null,
-)
+    /** PageLayout name; null = decide from the book (vertical for Japanese RTL books). Schema v4. */
+    val pageLayout: String? = null,
+    /** Marked 想读 by the user. Schema v4. */
+    @ColumnInfo(defaultValue = "0")
+    val wantToRead: Boolean = false,
+) {
+    val started: Boolean get() = lastOpenedAt != null && progress > 0.001f
+}
+
+/** Groups books by language for filtering: "zh", "zh-Hant", "en", "ja", …; null if unknown. */
+fun Book.languageKey(): String? {
+    if (isTraditional) return "zh-Hant"
+    val base = language?.substringBefore('-')?.substringBefore('_')?.lowercase()?.takeIf { it.isNotBlank() && it != "und" }
+    if (base != null) return if (base == "cmn") "zh" else base
+    return if (title.any { it in '\u4e00'..'\u9fff' }) "zh" else null
+}
+
+fun languageLabel(key: String): String = when (key) {
+    "zh" -> "中文"
+    "zh-Hant" -> "繁体中文"
+    "en" -> "英文"
+    "ja" -> "日文"
+    else -> java.util.Locale.forLanguageTag(key).getDisplayLanguage(java.util.Locale.CHINESE).ifBlank { key }
+}
 
 @Dao
 interface BookDao {
@@ -76,6 +100,9 @@ interface BookDao {
 
     @Query("DELETE FROM books WHERE id = :id")
     suspend fun delete(id: Long)
+
+    @Query("SELECT fileName || ':' || fileSize FROM books")
+    suspend fun fileKeys(): List<String>
 }
 
 enum class AnnotationType { BOOKMARK, HIGHLIGHT }
@@ -118,9 +145,9 @@ interface AnnotationDao {
 
 @Database(
     entities = [Book::class, Annotation::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4)],
 )
 abstract class ShelfDatabase : RoomDatabase() {
     abstract fun books(): BookDao

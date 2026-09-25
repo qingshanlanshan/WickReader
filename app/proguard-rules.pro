@@ -11,3 +11,10 @@
 -keep class com.google.android.gms.internal.mlkit_translate.** { *; }
 -keep class com.google.android.gms.internal.mlkit_common.** { *; }
 -dontwarn org.xmlpull.v1.**
+# sherpa-onnx reads Kotlin config fields and calls callbacks from native code.
+-keep class com.k2fsa.sherpa.onnx.** { *; }
+-dontwarn org.apache.commons.compress.**
+-dontwarn com.github.luben.zstd.**
+-dontwarn org.brotli.dec.**
+-dontwarn org.tukaani.xz.**
+-dontwarn org.objectweb.asm.**

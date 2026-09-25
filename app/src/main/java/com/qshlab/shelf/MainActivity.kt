@@ -28,6 +28,9 @@ import com.qshlab.shelf.ui.GroupKind
 import com.qshlab.shelf.ui.GroupScreen
 import com.qshlab.shelf.ui.LibraryScreen
 import com.qshlab.shelf.ui.LibraryViewModel
+import com.qshlab.shelf.ui.ScanScreen
+import com.qshlab.shelf.ui.SettingsActivity
+import com.qshlab.shelf.ui.SuggestionsScreen
 
 class MainActivity : ComponentActivity() {
     private var vm: LibraryViewModel? = null
@@ -70,8 +73,13 @@ class MainActivity : ComponentActivity() {
                             onOpenSeries = { nav.navigate("series/${Uri.encode(it)}") },
                             onOpenAuthor = { nav.navigate("author/${Uri.encode(it)}") },
                             onOpenCatalogs = { nav.navigate("catalogs") },
+                            onOpenScan = { nav.navigate("scan") },
+                            onOpenSuggestions = { nav.navigate("suggestions") },
+                            onOpenSettings = { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) },
                         )
                     }
+                    composable("scan") { ScanScreen(vm) { nav.popBackStack() } }
+                    composable("suggestions") { SuggestionsScreen(vm) { nav.popBackStack() } }
                     composable("catalogs") {
                         CatalogsScreen(onBack = { nav.popBackStack() }, onOpen = { c -> nav.navigate("feed?title=${Uri.encode(c.name)}&url=${Uri.encode(c.url)}") })
                     }

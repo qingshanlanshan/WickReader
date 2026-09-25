@@ -47,4 +47,12 @@ class ChineseConverterTest {
         assertTrue(conv.traditionalRatio("雲從山後慢慢升起來，把整個山谷蓋得嚴嚴實實，連鳥叫聲都變得遙遠。".repeat(4)) > 0.1)
         assertTrue(conv.traditionalRatio("云从山后慢慢升起来，把整个山谷盖得严严实实，连鸟叫声都变得遥远。".repeat(4)) < 0.02)
     }
+
+    @Test fun simplifiedToTraditional() {
+        val s2t = ChineseConverter.load(zhuRule = false, charsFile = "STCharacters.txt", phrasesFile = "STPhrases.txt") { name ->
+            File("src/main/assets/opencc/$name").inputStream()
+        }
+        assertEquals("紅樓夢", s2t.toSimplified("红楼梦"))
+        assertEquals("三國演義", s2t.toSimplified("三国演义"))
+    }
 }

@@ -145,7 +145,7 @@ fun FeedScreen(title: String, url: String, onBack: () -> Unit, onOpenFeed: (titl
     var selected by remember { mutableStateOf<Publication?>(null) }
     val snackbar = remember { SnackbarHostState() }
 
-    LaunchedEffect(url) { result = Opds.load(url) }
+    LaunchedEffect(url) { result = Opds.load(context, url) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
@@ -163,7 +163,7 @@ fun FeedScreen(title: String, url: String, onBack: () -> Unit, onOpenFeed: (titl
                 is FeedResult.Loaded -> LazyColumn(contentPadding = PaddingValues(bottom = 32.dp)) {
                     if (r.searchTemplate != null) item {
                         val search = {
-                            if (query.isNotBlank()) onOpenFeed("搜索：${query.trim()}", Opds.searchUrl(r.searchTemplate, query.trim()))
+                            if (query.isNotBlank()) onOpenFeed("搜索：${query.trim()}", Opds.searchUrl(context, r.searchTemplate, query.trim()))
                         }
                         OutlinedTextField(
                             value = query,
@@ -174,6 +174,13 @@ fun FeedScreen(title: String, url: String, onBack: () -> Unit, onOpenFeed: (titl
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             keyboardActions = KeyboardActions(onSearch = { search() }),
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        )
+                    }
+                    items(r.shortcuts, key = { "s" + it.second }) { (label, link) ->
+                        ListItem(
+                            headlineContent = { Text(label) },
+                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                            modifier = Modifier.clickable { onOpenFeed(label, link) },
                         )
                     }
                     val feed = r.feed
