@@ -48,9 +48,15 @@
                 <data android:scheme="file" />
                 <data android:mimeType="application/epub+zip" />
                 <data android:mimeType="text/plain" />
+                <data android:mimeType="application/pdf" />
+                <data android:mimeType="application/x-fictionbook+xml" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+                <data android:mimeType="application/vnd.comicbook+zip" />
+                <data android:mimeType="application/x-cbz" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
+                <data android:mimeType="application/pdf" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/epub+zip" />
                 <data android:mimeType="text/plain" />
@@ -59,6 +65,9 @@
         </activity>
         <activity
             android:name=".reader.ReaderActivity"
+            android:exported="false" />
+        <activity
+            android:name=".reader.PdfReaderActivity"
             android:exported="false" />
         <activity
             android:name=".ui.SettingsActivity"

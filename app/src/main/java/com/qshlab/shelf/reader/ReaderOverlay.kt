@@ -18,6 +18,9 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import com.qshlab.shelf.settings.PageLayout
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -171,6 +174,8 @@ fun ReaderOverlay(
                             Text(locator?.title ?: "", Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
                             Text("${((dragging ?: progress) * 100).roundToInt()}%", style = MaterialTheme.typography.bodySmall)
                         }
+                        // With the next page on the left, the book runs right-to-left along the slider too.
+                        CompositionLocalProvider(LocalLayoutDirection provides if (layout == PageLayout.HORIZONTAL_LTR) LayoutDirection.Ltr else LayoutDirection.Rtl) {
                         Slider(
                             value = dragging ?: progress,
                             onValueChange = { dragging = it },
@@ -182,6 +187,7 @@ fun ReaderOverlay(
                                 }
                             },
                         )
+                        }
                     }
                 }
             }

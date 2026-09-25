@@ -99,6 +99,9 @@ class ReaderActivity : FragmentActivity() {
     // Read-aloud (TTS) state.
     private var tts: ReadAloud? = null
     private var ttsLocator: Locator? = null
+    private var aiEngine: com.qshlab.shelf.tts.AiTtsEngine? = null
+    private var utterancesRead = 0
+    private var slowVoiceWarned = false
     private var ttsJob: Job? = null
     private var ttsActive by mutableStateOf(false)
     private var ttsPlaying by mutableStateOf(false)
@@ -247,7 +250,12 @@ class ReaderActivity : FragmentActivity() {
         }
         setContentView(
             FrameLayout(this).apply {
-                addView(container, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+                addView(
+                    ReversedSwipeFrame(this@ReaderActivity, active = { layout == PageLayout.HORIZONTAL_RTL }, onSwipe = ::turnPage).apply {
+                        addView(container, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+                    },
+                    FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
+                )
                 addView(overlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             }
         )
@@ -263,18 +271,18 @@ class ReaderActivity : FragmentActivity() {
         val pageTaps = DirectionalNavigationAdapter(navigator, animatedTransition = true)
         navigator.addInputListener(object : InputListener {
             override fun onTap(event: TapEvent): Boolean {
-                if (layout != PageLayout.VERTICAL_RTL) return pageTaps.onTap(event)
-                // Readium lays vertical text out as one sideways scroll: the left edge moves on.
+                if (layout == PageLayout.HORIZONTAL_LTR) return pageTaps.onTap(event)
+                // Next page on the left: the left edge moves on.
                 val width = navigator.publicationView.width
                 return when {
-                    event.point.x < width * 0.3f -> true.also { turnVertical(forward = true) }
-                    event.point.x > width * 0.7f -> true.also { turnVertical(forward = false) }
+                    event.point.x < width * 0.3f -> true.also { turnPage(forward = true) }
+                    event.point.x > width * 0.7f -> true.also { turnPage(forward = false) }
                     else -> false
                 }
             }
 
             override fun onKey(event: org.readium.r2.navigator.input.KeyEvent) =
-                if (layout != PageLayout.VERTICAL_RTL) pageTaps.onKey(event) else false
+                if (layout == PageLayout.HORIZONTAL_LTR) pageTaps.onKey(event) else false
         })
         navigator.addInputListener(object : InputListener {
             override fun onTap(event: TapEvent): Boolean {
@@ -440,6 +448,7 @@ class ReaderActivity : FragmentActivity() {
                 val nav = TtsNavigatorFactory(application, session.publication, provider)
                     ?.createNavigator(listener, start, settings.toAiPreferences())?.getOrNull()
                 if (nav != null) {
+                    aiEngine = provider.engine
                     handle = ReadAloud(nav, ai = true) { s -> nav.submitPreferences(s.toAiPreferences()) }
                 } else {
                     Toast.makeText(this@ReaderActivity, "AI 语音加载失败，改用手机自带语音", Toast.LENGTH_LONG).show()
@@ -470,6 +479,13 @@ class ReaderActivity : FragmentActivity() {
                 launch {
                     nav.location.collect { loc ->
                         ttsLocator = loc.utteranceLocator
+                        aiEngine?.let { engine ->
+                            engine.onUtterance(loc.utteranceLocator)
+                            if (!slowVoiceWarned && ++utterancesRead > 6 && engine.speedRatio > 1.05) {
+                                slowVoiceWarned = true
+                                Toast.makeText(this@ReaderActivity, "这台手机合成这个声音较慢，句子间可能会停顿。可以在「音色」里换成「标贝女声」。", Toast.LENGTH_LONG).show()
+                            }
+                        }
                         // Highlight the sentence being read and keep it on screen.
                         navigator.applyDecorations(
                             listOf(Decoration("tts", loc.utteranceLocator, Decoration.Style.Highlight(tint = Color.argb(255, 255, 214, 102)))),
@@ -571,10 +587,20 @@ class ReaderActivity : FragmentActivity() {
         ttsJob = null
         tts?.navigator?.close()
         tts = null
+        aiEngine = null
         ttsActive = false
         ttsPlaying = false
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         lifecycleScope.launch { navigator.applyDecorations(emptyList(), "tts") }
+    }
+
+    /** Next / previous page in any layout (volume keys, taps, reversed swipes). */
+    private fun turnPage(forward: Boolean) {
+        when {
+            layout == PageLayout.VERTICAL_RTL -> turnVertical(forward)
+            forward -> navigator.goForward(animated = layout == PageLayout.HORIZONTAL_LTR)
+            else -> navigator.goBackward(animated = layout == PageLayout.HORIZONTAL_LTR)
+        }
     }
 
     /**
@@ -666,8 +692,8 @@ class ReaderActivity : FragmentActivity() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         // While reading aloud the volume keys change the volume.
         if (::navigator.isInitialized && settings.volumeKeysTurnPages && !overlayVisible && tts == null) {
-            if (layout == PageLayout.VERTICAL_RTL && (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP)) {
-                turnVertical(forward = keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
+            if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+                turnPage(forward = keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
                 return true
             }
             when (keyCode) {
@@ -711,7 +737,53 @@ class ReaderActivity : FragmentActivity() {
         })(DIR)"""
         private const val DOWNLOAD_VOICES = "download"
 
+        /** Opens an already-opened session ([ReaderRepository.open]) in the matching reader. */
         fun intent(context: Context, bookId: Long) =
-            Intent(context, ReaderActivity::class.java).putExtra(EXTRA_BOOK_ID, bookId)
+            Intent(context, if (context.shelfApp.readers[bookId]?.isPdf == true) PdfReaderActivity::class.java else ReaderActivity::class.java)
+                .putExtra(EXTRA_BOOK_ID, bookId)
+    }
+}
+
+/**
+ * For horizontal text with the next page on the left. Readium pages left-to-right there, so
+ * horizontal swipes are taken over and turned around: swiping right moves forward. Handled in
+ * dispatchTouchEvent because Readium's pager forbids its parents from intercepting. A press held
+ * past the long-press delay is left alone (text selection).
+ */
+private class ReversedSwipeFrame(
+    context: Context,
+    private val active: () -> Boolean,
+    private val onSwipe: (forward: Boolean) -> Unit,
+) : FrameLayout(context) {
+    private val slop = android.view.ViewConfiguration.get(context).scaledTouchSlop * 2
+    private var downX = 0f
+    private var downY = 0f
+    private var downTime = 0L
+    private var swiping = false
+
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        if (!active()) return super.dispatchTouchEvent(ev)
+        when (ev.actionMasked) {
+            android.view.MotionEvent.ACTION_DOWN -> { downX = ev.x; downY = ev.y; downTime = ev.eventTime; swiping = false }
+            android.view.MotionEvent.ACTION_MOVE -> if (!swiping) {
+                val dx = ev.x - downX
+                val dy = ev.y - downY
+                val early = ev.eventTime - downTime < android.view.ViewConfiguration.getLongPressTimeout()
+                if (early && kotlin.math.abs(dx) > slop && kotlin.math.abs(dx) > kotlin.math.abs(dy) * 1.5f) {
+                    swiping = true
+                    // The page underneath stops following the finger.
+                    val cancel = android.view.MotionEvent.obtain(ev).apply { action = android.view.MotionEvent.ACTION_CANCEL }
+                    super.dispatchTouchEvent(cancel)
+                    cancel.recycle()
+                }
+            }
+            android.view.MotionEvent.ACTION_UP -> if (swiping) {
+                swiping = false
+                onSwipe(ev.x - downX > 0)
+                return true
+            }
+            android.view.MotionEvent.ACTION_CANCEL -> swiping = false
+        }
+        return if (swiping) true else super.dispatchTouchEvent(ev)
     }
 }

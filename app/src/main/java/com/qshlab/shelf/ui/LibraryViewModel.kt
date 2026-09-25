@@ -148,7 +148,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun report(results: List<ImportResult>, quietIfEmpty: Boolean = false) {
         if (results.isEmpty()) {
-            if (!quietIfEmpty) events.send("没有找到可导入的书（目前支持 EPUB、TXT）")
+            if (!quietIfEmpty) events.send("没有找到可导入的书（支持 EPUB、PDF、TXT、FB2、Word、CBZ）")
             return
         }
         val added = results.count { it is ImportResult.Added }
@@ -204,7 +204,8 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
             languages = books.mapNotNull { it.languageKey() }.distinct().sorted(),
             formats = books.map { it.format }.distinct().sorted(),
             suggestions = suggestions,
-            current = books.filter { it.lastOpenedAt != null && !it.finished }.maxByOrNull { it.lastOpenedAt!! },
+            // The last book opened, finished or not (reaching the last page marks a book finished).
+            current = books.filter { it.lastOpenedAt != null }.maxByOrNull { it.lastOpenedAt!! },
         )
     }
 

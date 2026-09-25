@@ -55,8 +55,11 @@ internal fun injectStyle(html: String, layout: PageLayout = PageLayout.HORIZONTA
     return html.substring(0, head) + NORMALIZE_CSS + extra + html.substring(head)
 }
 
-/** Book formats the reader can open right now. */
-val SUPPORTED_EXTENSIONS = setOf("epub", "txt")
+/** Book formats the reader can open (FB2, DOCX, HTML, CBZ, TXT are converted to EPUB at import). */
+val SUPPORTED_EXTENSIONS = setOf("epub", "pdf", "txt", "md") + Converters.EXTENSIONS
+
+/** E-book formats we recognize but can't open yet (shown in the scan, with advice). */
+val UNSUPPORTED_EBOOK_EXTENSIONS = setOf("mobi", "azw", "azw3", "prc", "djvu", "chm", "cbr", "doc", "rtf")
 
 sealed interface ImportResult {
     data class Added(val book: Book) : ImportResult
@@ -98,7 +101,7 @@ class LibraryRepository(
             if (depth > 6) return
             for (f in dir.listFiles()) {
                 if (f.isDirectory) walk(f, depth + 1)
-                else if (f.name?.substringAfterLast('.', "")?.lowercase() in SUPPORTED_EXTENSIONS) files += f
+                else if (f.name?.let(Converters::extensionOf) in SUPPORTED_EXTENSIONS) files += f
             }
         }
         walk(root, 0)
@@ -126,10 +129,10 @@ class LibraryRepository(
     private suspend fun importUri(uri: Uri, knownName: String? = null, knownSize: Long? = null): ImportResult =
         withContext(Dispatchers.IO) {
             val (name, size) = if (knownName != null && knownSize != null) knownName to knownSize else queryNameAndSize(uri)
-            val ext = name.substringAfterLast('.', "").lowercase()
-            if (ext !in SUPPORTED_EXTENSIONS) return@withContext ImportResult.Skipped(name, "暂不支持 .$ext")
+            val ext = Converters.extensionOf(name)
+            if (ext !in SUPPORTED_EXTENSIONS) return@withContext ImportResult.Skipped(name, unsupportedReason(ext))
             if (dao.countDuplicates(name, size) > 0) return@withContext ImportResult.Skipped(name, "已在书架中")
-            val temp = File(context.cacheDir, "import-${UUID.randomUUID()}.$ext")
+            val temp = File(context.cacheDir, "import-${UUID.randomUUID()}.tmp")
             val copied = runCatching {
                 context.contentResolver.openInputStream(uri)!!.use { input -> temp.outputStream().use { input.copyTo(it) } }
             }
@@ -137,20 +140,30 @@ class LibraryRepository(
             importFile(temp, name, move = true)
         }
 
+    private fun unsupportedReason(ext: String) =
+        if (ext in UNSUPPORTED_EBOOK_EXTENSIONS) "暂不支持 .$ext（可用 Calibre 转成 EPUB）" else "暂不支持 .$ext"
+
     private suspend fun importFile(source: File, name: String, move: Boolean): ImportResult {
-        val ext = name.substringAfterLast('.', "").lowercase()
+        val ext = Converters.extensionOf(name)
         if (ext !in SUPPORTED_EXTENSIONS) {
             if (move) source.delete()
-            return ImportResult.Skipped(name, "暂不支持 .$ext")
+            return ImportResult.Skipped(name, unsupportedReason(ext))
         }
         val size = source.length()
         if (dao.countDuplicates(name, size) > 0) {
             if (move) source.delete()
             return ImportResult.Skipped(name, "已在书架中")
         }
-        // TXT is converted once into an EPUB; everything downstream only deals with EPUB.
-        val dest = File(booksDir, "${UUID.randomUUID()}.epub")
-        if (ext == "txt") {
+        // TXT, FB2, DOCX, HTML and CBZ are converted once into an EPUB; PDF is kept as is.
+        val dest = File(booksDir, "${UUID.randomUUID()}.${if (ext == "pdf") "pdf" else "epub"}")
+        if (ext in Converters.EXTENSIONS) {
+            val converted = runCatching { Converters.convert(ext, source, name, dest) }
+            if (move) source.delete()
+            if (converted.isFailure) {
+                dest.delete()
+                return ImportResult.Skipped(name, "无法解析这个 ${ext.uppercase()}")
+            }
+        } else if (ext == "txt" || ext == "md") {
             val converted = runCatching { TxtToEpub.convert(source, name, dest) }
             if (move) source.delete()
             if (converted.isFailure) {
@@ -173,7 +186,7 @@ class LibraryRepository(
             return ImportResult.Skipped(name, "文件损坏或格式不支持")
         }
         try {
-            val book = describe(publication, dest, name, size).copy(isTraditional = detectTraditional(publication))
+            val book = describe(publication, dest, name, size).copy(isTraditional = ext != "pdf" && detectTraditional(publication))
             val id = dao.insert(book)
             val coverPath = publication.cover()?.let { saveCover(id, it) }
             val saved = book.copy(id = id, coverPath = coverPath)
@@ -254,7 +267,7 @@ class LibraryRepository(
         return Book(
             filePath = file.absolutePath,
             fileName = fileName,
-            format = fileName.substringAfterLast('.', "").lowercase(),
+            format = Converters.extensionOf(fileName),
             title = title,
             author = author,
             series = series,

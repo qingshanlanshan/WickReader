@@ -10,6 +10,10 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Only for the PDF renderer that Readium's pdfium adapter depends on.
+        maven("https://jitpack.io") {
+            content { includeGroup("com.github.marain87") }
+        }
     }
 }
 rootProject.name = "Shelf"

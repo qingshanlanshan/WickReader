@@ -32,5 +32,7 @@ fun ReaderSettings.toEpubPreferences(layout: PageLayout): EpubPreferences = Epub
     scroll = scroll,
     verticalText = layout == PageLayout.VERTICAL_RTL,
     // Always explicit: zh-TW / ja books otherwise default to right-to-left even with horizontal text.
-    readingProgression = if (layout == PageLayout.HORIZONTAL_LTR) ReadingProgression.LTR else ReadingProgression.RTL,
+    // Horizontal "next page on the left" also stays LTR here (Readium mis-pages horizontal CJK
+    // right-to-left); ReaderActivity turns taps and swipes around instead.
+    readingProgression = if (layout == PageLayout.VERTICAL_RTL) ReadingProgression.RTL else ReadingProgression.LTR,
 )

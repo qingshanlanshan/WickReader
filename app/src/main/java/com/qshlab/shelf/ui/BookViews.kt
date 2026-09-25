@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -261,9 +262,23 @@ fun ContinueCard(book: Book, onClick: () -> Unit) {
             Column(Modifier.weight(1f).padding(start = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("继续阅读", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 Text(book.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val chapter = remember(book.locator) {
+                    book.locator?.let { runCatching { org.json.JSONObject(it).optString("title") }.getOrNull() }?.takeIf { it.isNotBlank() }
+                }
+                if (chapter != null) {
+                    Text(chapter, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Progress(book.progress, Modifier.width(120.dp))
-                    Text(if (book.progress <= 0f) "刚开始" else percent(book.progress), Modifier.padding(start = 8.dp), style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        when {
+                            book.finished -> "已读完"
+                            book.progress <= 0f -> "刚开始"
+                            else -> percent(book.progress)
+                        },
+                        Modifier.padding(start = 8.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
                 }
             }
         }

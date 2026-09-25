@@ -25,6 +25,13 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.BookmarkRemove
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.RemoveDone
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material.icons.filled.DoneAll
@@ -112,7 +119,7 @@ fun LibraryScreen(
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) vm.importFolder(uri)
     }
-    val importFiles = { pickFiles.launch(arrayOf("application/epub+zip", "text/plain", "application/octet-stream", "*/*")) }
+    val importFiles = { pickFiles.launch(arrayOf("*/*")) }
     val openGroup = { stack: ShelfItem.Stack -> if (stack.kind == GroupKind.SERIES) onOpenSeries(stack.name) else onOpenAuthor(stack.name) }
     val toggle = { ids: List<Long> ->
         val sel = selection.orEmpty()
@@ -128,25 +135,24 @@ fun LibraryScreen(
         topBar = {
             val sel = selection
             if (sel != null) {
-                SelectionBar(
-                    count = sel.size,
-                    onClose = { selection = null },
-                    onSeries = { seriesDialogFor = selectedBooks() },
-                    onWant = { vm.setWantToRead(sel, true); selection = null },
-                    onFinished = { vm.setFinished(sel, true); selection = null },
-                    onUnfinished = { vm.setFinished(sel, false); selection = null },
-                    onNotWant = { vm.setWantToRead(sel, false); selection = null },
-                    onEdit = if (sel.size == 1) ({ actionsFor = selectedBooks().firstOrNull(); selection = null }) else null,
-                    onSelectAll = { selection = state.items.flatMap { item -> if (item is ShelfItem.Single) listOf(item.book.id) else (item as ShelfItem.Stack).books.map { it.id } }.toSet() },
-                    onDelete = { confirmDelete = sel },
+                TopAppBar(
+                    navigationIcon = { IconButton(onClick = { selection = null }) { Icon(Icons.Filled.Close, "退出选择") } },
+                    title = { Text(if (sel.isEmpty()) "点选书籍" else "已选 ${sel.size} 本") },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    actions = {
+                        TextButton(onClick = {
+                            selection = state.items.flatMap { item -> if (item is ShelfItem.Single) listOf(item.book.id) else (item as ShelfItem.Stack).books.map { it.id } }.toSet()
+                        }) { Text("全选") }
+                    },
                 )
             } else {
                 TopAppBar(
                     scrollBehavior = scrollBehavior,
                     title = {
                         if (searching) {
+                            val query by vm.query.collectAsState()
                             TextField(
-                                value = state.query,
+                                value = query,
                                 onValueChange = { vm.query.value = it },
                                 placeholder = { Text("搜索书名、作者、系列") },
                                 singleLine = true,
@@ -189,6 +195,25 @@ fun LibraryScreen(
                             }
                         }
                     },
+                )
+            }
+        },
+        bottomBar = {
+            val sel = selection
+            if (sel != null) {
+                val books = selectedBooks()
+                val allWant = books.isNotEmpty() && books.all { it.wantToRead }
+                val allFinished = books.isNotEmpty() && books.all { it.finished }
+                SelectionActions(
+                    enabled = sel.isNotEmpty(),
+                    single = sel.size == 1,
+                    allWant = allWant,
+                    allFinished = allFinished,
+                    onSeries = { seriesDialogFor = books },
+                    onWant = { vm.setWantToRead(sel, !allWant); selection = null },
+                    onFinished = { vm.setFinished(sel, !allFinished); selection = null },
+                    onEdit = { actionsFor = books.firstOrNull(); selection = null },
+                    onDelete = { confirmDelete = sel },
                 )
             }
         },
@@ -264,46 +289,29 @@ fun LibraryScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Labeled actions for the selected books (each action appears once). */
 @Composable
-private fun SelectionBar(
-    count: Int,
-    onClose: () -> Unit,
+private fun SelectionActions(
+    enabled: Boolean,
+    single: Boolean,
+    allWant: Boolean,
+    allFinished: Boolean,
     onSeries: () -> Unit,
     onWant: () -> Unit,
     onFinished: () -> Unit,
-    onUnfinished: () -> Unit,
-    onNotWant: () -> Unit,
-    onEdit: (() -> Unit)?,
-    onSelectAll: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    var more by remember { mutableStateOf(false) }
-    TopAppBar(
-        navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.Filled.Close, "退出选择") } },
-        title = { Text(if (count == 0) "选择书" else "已选 $count 本") },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-        actions = {
-            val enabled = count > 0
-            IconButton(onClick = onSeries, enabled = enabled) { Icon(Icons.Filled.CollectionsBookmark, "设为系列") }
-            IconButton(onClick = onWant, enabled = enabled) { Icon(Icons.Filled.BookmarkAdd, "标记想读") }
-            IconButton(onClick = onFinished, enabled = enabled) { Icon(Icons.Filled.DoneAll, "标记已读完") }
-            Box {
-                IconButton(onClick = { more = true }) { Icon(Icons.Filled.MoreVert, "更多") }
-                DropdownMenu(expanded = more, onDismissRequest = { more = false }) {
-                    DropdownMenuItem(text = { Text("全选") }, onClick = { more = false; onSelectAll() })
-                    if (onEdit != null) DropdownMenuItem(text = { Text("编辑信息") }, onClick = { more = false; onEdit() })
-                    DropdownMenuItem(text = { Text("设为系列…") }, enabled = enabled, onClick = { more = false; onSeries() })
-                    DropdownMenuItem(text = { Text("标记为想读") }, enabled = enabled, onClick = { more = false; onWant() })
-                    DropdownMenuItem(text = { Text("取消想读") }, enabled = enabled, onClick = { more = false; onNotWant() })
-                    DropdownMenuItem(text = { Text("标记为已读完") }, enabled = enabled, onClick = { more = false; onFinished() })
-                    DropdownMenuItem(text = { Text("标记为未读完") }, enabled = enabled, onClick = { more = false; onUnfinished() })
-                    HorizontalDivider()
-                    DropdownMenuItem(text = { Text("删除") }, enabled = enabled, onClick = { more = false; onDelete() })
-                }
-            }
-        },
-    )
+    NavigationBar {
+        @Composable
+        fun action(icon: ImageVector, label: String, on: Boolean, onClick: () -> Unit) =
+            NavigationBarItem(selected = false, enabled = on, onClick = onClick, icon = { Icon(icon, null) }, label = { Text(label, maxLines = 1) })
+        action(Icons.Filled.CollectionsBookmark, "设为系列", enabled, onSeries)
+        action(if (allWant) Icons.Filled.BookmarkRemove else Icons.Filled.BookmarkAdd, if (allWant) "取消想读" else "想读", enabled, onWant)
+        action(if (allFinished) Icons.Filled.RemoveDone else Icons.Filled.DoneAll, if (allFinished) "未读完" else "已读完", enabled, onFinished)
+        action(Icons.Filled.Edit, "编辑", single, onEdit)
+        action(Icons.Filled.Delete, "删除", enabled, onDelete)
+    }
 }
 
 /** 分组 · 排序 · 筛选 chips under the top bar. */
@@ -473,7 +481,7 @@ fun ShelfItems(
 private fun EmptyShelf(onScan: () -> Unit, onImportFiles: () -> Unit, onOpenCatalogs: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         Text("书架是空的", style = MaterialTheme.typography.titleLarge)
-        Text("导入 EPUB 或 TXT 电子书开始阅读", Modifier.padding(top = 8.dp, bottom = 20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("支持 EPUB、PDF、TXT、FB2、Word、漫画 CBZ", Modifier.padding(top = 8.dp, bottom = 20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         ExtendedFloatingActionButton(onClick = onScan, icon = { Icon(Icons.Filled.Search, null) }, text = { Text("扫描手机中的电子书") })
         TextButton(onClick = onImportFiles, modifier = Modifier.padding(top = 8.dp)) { Text("选择文件导入") }
         TextButton(onClick = onOpenCatalogs) { Text("从在线书库下载公版书") }

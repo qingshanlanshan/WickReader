@@ -54,8 +54,9 @@ enum class ReaderFont(val label: String) { SANS("黑体"), SERIF("宋体"), ORIG
 
 /** Text direction and page order, set per book. */
 enum class PageLayout(val label: String) {
-    HORIZONTAL_LTR("横排（下一页在右）"),
-    VERTICAL_RTL("竖排 · 日式（从右往左读，下一页在左）"),
+    HORIZONTAL_LTR("横排 · 下一页在右"),
+    HORIZONTAL_RTL("横排 · 下一页在左"),
+    VERTICAL_RTL("竖排 · 下一页在左（日式）"),
 }
 
 data class ReaderSettings(
@@ -75,11 +76,15 @@ data class ReaderSettings(
      * TTS voice id.
      */
     val ttsVoices: Map<String, String> = emptyMap(),
+    /** PDF: scroll pages continuously instead of one at a time. */
+    val pdfScroll: Boolean = false,
+    /** PDF: fit the page width (else the whole page). */
+    val pdfFitWidth: Boolean = true,
 )
 
 data class AppSettings(
-    /** File formats looked for when scanning the phone. */
-    val scanFormats: Set<String> = setOf("epub", "txt"),
+    /** Format keys ([com.qshlab.shelf.data.BookScanner.FORMATS]) looked for when scanning the phone. */
+    val scanFormats: Set<String> = com.qshlab.shelf.data.BookScanner.DEFAULT_FORMATS,
     /** TXT files smaller than this are skipped by the scan (logs, readmes…). */
     val scanTxtMinKb: Int = 30,
     /** Series suggestions the user dismissed (sorted book ids joined by ","). */
@@ -108,8 +113,10 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
         val volumeKeys = booleanPreferencesKey("reader.volumeKeys")
         val ttsSpeed = doublePreferencesKey("reader.ttsSpeed")
         val ttsVoices = stringPreferencesKey("reader.ttsVoices")
+        val pdfScroll = booleanPreferencesKey("reader.pdfScroll")
+        val pdfFitWidth = booleanPreferencesKey("reader.pdfFitWidth")
 
-        val scanFormats = stringPreferencesKey("app.scanFormats")
+        val scanFormats = stringPreferencesKey("app.scanFormatGroups")
         val scanTxtMinKb = intPreferencesKey("app.scanTxtMinKb")
         val dismissed = stringPreferencesKey("app.dismissedSuggestions")
         val preferAi = booleanPreferencesKey("app.preferAiVoice")
@@ -144,6 +151,8 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
             volumeKeysTurnPages = p[K.volumeKeys] ?: d.volumeKeysTurnPages,
             ttsSpeed = p[K.ttsSpeed] ?: d.ttsSpeed,
             ttsVoices = p[K.ttsVoices]?.split('\n')?.mapNotNull { l -> l.split('=', limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] } }?.toMap() ?: d.ttsVoices,
+            pdfScroll = p[K.pdfScroll] ?: d.pdfScroll,
+            pdfFitWidth = p[K.pdfFitWidth] ?: d.pdfFitWidth,
         )
     }
 
@@ -178,6 +187,8 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
         p[K.volumeKeys] = s.volumeKeysTurnPages
         p[K.ttsSpeed] = s.ttsSpeed
         p[K.ttsVoices] = s.ttsVoices.entries.joinToString("\n") { "${it.key}=${it.value}" }
+        p[K.pdfScroll] = s.pdfScroll
+        p[K.pdfFitWidth] = s.pdfFitWidth
     }
 
     suspend fun updateApp(s: AppSettings) = store.edit { p ->

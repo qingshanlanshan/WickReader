@@ -45,8 +45,10 @@ class VoiceManager(private val context: Context, private val scope: CoroutineSco
     private val jobs = mutableMapOf<String, Job>()
 
     init {
-        // Leftovers of an interrupted download or unpack.
-        root.listFiles()?.filter { it.name.endsWith(".part") || it.name.endsWith(".tmp") }?.forEach { it.deleteRecursively() }
+        // Leftovers of an interrupted download or unpack, and models no longer offered.
+        val known = VoiceCatalog.models.map { it.id }.toSet()
+        root.listFiles()?.filter { it.name.endsWith(".part") || it.name.endsWith(".tmp") || (it.isDirectory && it.name !in known) }
+            ?.forEach { it.deleteRecursively() }
     }
 
     private fun scanInstalled(): Set<String> =
@@ -78,6 +80,10 @@ class VoiceManager(private val context: Context, private val scope: CoroutineSco
                     setState(model.id, DownloadState.Unpacking)
                     unpack(part, tmp)
                     part.delete()
+                }
+                for ((name, url) in model.extraFiles) {
+                    setState(model.id, DownloadState.Downloading(0f))
+                    fetch(url, File(tmp, name)) { setState(model.id, DownloadState.Downloading(it)) }
                 }
                 val dest = dir(model.id)
                 dest.deleteRecursively()
@@ -211,7 +217,9 @@ class VoiceManager(private val context: Context, private val scope: CoroutineSco
         withContext(Dispatchers.IO) {
             loaded?.second?.release()
             loaded = null
+            val started = System.currentTimeMillis()
             val tts = OfflineTts(config = config(model, dir(model.id)))
+            android.util.Log.d("ShelfTts", "loaded ${model.id} in ${System.currentTimeMillis() - started} ms")
             loaded = model.id to tts
             tts
         }
@@ -271,6 +279,19 @@ class VoiceManager(private val context: Context, private val scope: CoroutineSco
                     numThreads = threads,
                 ),
                 ruleFsts = "$p/phone-zh.fst,$p/date-zh.fst,$p/number-zh.fst",
+            )
+            ModelKind.MATCHA -> OfflineTtsConfig(
+                model = OfflineTtsModelConfig(
+                    matcha = com.k2fsa.sherpa.onnx.OfflineTtsMatchaModelConfig(
+                        acousticModel = "$p/${model.modelFile}",
+                        vocoder = "$p/vocos-22khz-univ.onnx",
+                        lexicon = "$p/lexicon.txt",
+                        tokens = "$p/tokens.txt",
+                    ),
+                    numThreads = threads,
+                ),
+                ruleFsts = listOf("phone.fst", "date.fst", "number.fst").map { File(d, it) }.filter { it.exists() }
+                    .joinToString(",") { it.absolutePath },
             )
             ModelKind.VITS -> OfflineTtsConfig(
                 model = OfflineTtsModelConfig(

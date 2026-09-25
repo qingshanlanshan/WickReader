@@ -143,13 +143,14 @@ fun SettingsScreen(onBack: () -> Unit) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                     Text("扫描手机时查找的格式", style = MaterialTheme.typography.bodyLarge)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("epub" to "EPUB", "txt" to "TXT").forEach { (ext, label) ->
-                            val on = ext in appSettings.scanFormats
+                        com.qshlab.shelf.data.BookScanner.FORMATS.forEach { f ->
+                            val on = f.key in appSettings.scanFormats
                             FilterChip(selected = on, onClick = {
-                                updateApp { s -> s.copy(scanFormats = if (on) s.scanFormats - ext else s.scanFormats + ext) }
-                            }, label = { Text(label) })
+                                updateApp { s -> s.copy(scanFormats = if (on) s.scanFormats - f.key else s.scanFormats + f.key) }
+                            }, label = { Text(f.label) })
                         }
                     }
+                    Text("MOBI / AZW3 暂时只会被列出（还不能打开）。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("忽略小于此大小的 TXT（排除日志、说明文件）", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyLarge)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(0, 10, 30, 100).forEach { kb ->

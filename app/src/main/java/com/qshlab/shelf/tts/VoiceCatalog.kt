@@ -1,6 +1,6 @@
 package com.qshlab.shelf.tts
 
-enum class ModelKind { KOKORO, VITS }
+enum class ModelKind { KOKORO, VITS, MATCHA }
 
 data class Speaker(val sid: Int, val name: String, val language: String)
 
@@ -21,6 +21,8 @@ data class VoiceModel(
     val license: String,
     /** Hugging Face mirror with the files unpacked (csukuangfj/<id>): no slow bzip2 step on the phone. */
     val huggingFace: Boolean = false,
+    /** Files fetched separately, e.g. a vocoder: file name → URL. */
+    val extraFiles: Map<String, String> = emptyMap(),
 ) {
     val url get() = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$id.tar.bz2"
 
@@ -47,29 +49,31 @@ object VoiceCatalog {
 
     val models = listOf(
         VoiceModel(
-            id = "kokoro-int8-multi-lang-v1_1",
+            id = "kokoro-multi-lang-v1_1",
             title = "Kokoro 中英文（推荐）",
-            description = "最自然的声音，55 个女声 + 45 个男声，也能读英文。需要较新的手机。",
+            description = "最自然的声音，55 个女声 + 45 个男声，也能读英文。模型较大，需要较新的手机。",
             languages = setOf("zh", "en"),
-            downloadMb = 195,
+            downloadMb = 406,
             kind = ModelKind.KOKORO,
             speakers = kokoroNames.mapIndexed { i, n -> Speaker(i, kokoroLabel(n), if (n.startsWith("z")) "zh" else "en") },
             defaults = mapOf("zh" to 3, "en" to 0),
-            modelFile = "model.int8.onnx",
+            modelFile = "model.onnx",
             license = "Apache-2.0（hexgrad/Kokoro-82M-v1.1-zh）",
             huggingFace = true,
         ),
         VoiceModel(
-            id = "vits-piper-zh_CN-xiao_ya-medium-int8",
-            title = "小雅 中文（轻量）",
-            description = "体积小、速度快，适合旧手机。一个女声。",
+            id = "matcha-icefall-zh-baker",
+            title = "标贝女声 中文（快）",
+            description = "专业播音员录音训练，吐字清楚，合成极快，旧手机也流畅。一个女声。",
             languages = setOf("zh"),
-            downloadMb = 14,
-            kind = ModelKind.VITS,
-            speakers = listOf(Speaker(0, "小雅", "zh")),
+            downloadMb = 131,
+            kind = ModelKind.MATCHA,
+            speakers = listOf(Speaker(0, "标贝女声", "zh")),
             defaults = mapOf("zh" to 0),
-            modelFile = "zh_CN-xiao_ya-medium.onnx",
-            license = "Piper 模型；训练数据（标贝 BZNSYP）仅限非商业使用",
+            modelFile = "model-steps-3.onnx",
+            license = "Matcha-TTS / icefall（Apache-2.0）；训练数据（标贝 BZNSYP）仅限非商业使用",
+            huggingFace = true,
+            extraFiles = mapOf("vocos-22khz-univ.onnx" to "https://github.com/k2-fsa/sherpa-onnx/releases/download/vocoder-models/vocos-22khz-univ.onnx"),
         ),
         VoiceModel(
             id = "vits-piper-en_US-amy-medium-int8",

@@ -11,11 +11,12 @@ import java.util.concurrent.Executors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,7 +27,12 @@ import org.readium.navigator.media.tts.TtsEngine
 import org.readium.navigator.media.tts.TtsEngineProvider
 import org.readium.r2.navigator.preferences.PreferencesEditor
 import org.readium.r2.shared.ExperimentalReadiumApi
+import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.publication.services.content.Content
+import org.readium.r2.shared.publication.services.content.TextContentTokenizer
+import org.readium.r2.shared.publication.services.content.content
+import org.readium.r2.shared.util.tokenizer.TextUnit
 import org.readium.r2.shared.util.DebugError
 import org.readium.r2.shared.util.Error
 import org.readium.r2.shared.util.Language
@@ -74,15 +80,17 @@ sealed class AiTtsError(override val message: String) : TtsEngine.Error {
 /**
  * Readium TTS engine backed by sherpa-onnx neural voices.
  *
- * Latency is hidden two ways: long sentences are split at commas so audio starts after the first
- * clause is synthesized, and an utterance reports "done" shortly *before* its audio finishes, so
- * Readium asks for the next sentence while the tail is still playing.
+ * Each sentence is synthesized whole (splitting it breaks the intonation) and only played once its
+ * audio is complete, so playback never stalls mid-sentence. To avoid pauses between sentences,
+ * the next few sentences are synthesized ahead while the current one plays: the reader reports
+ * where it is ([onUtterance]) and a lookahead walks the book from there with the same sentence
+ * tokenizer Readium uses.
  */
 @OptIn(ExperimentalReadiumApi::class)
 class AiTtsEngine(
     private val manager: VoiceManager,
     private val converter: ChineseConverter,
-    private val publicationLanguage: Language?,
+    private val publication: Publication,
     initialPreferences: AiTtsPreferences,
 ) : TtsEngine<AiTtsSettings, AiTtsPreferences, AiTtsError, AiVoice> {
 
@@ -98,7 +106,7 @@ class AiTtsEngine(
     }
 
     private fun resolve(p: AiTtsPreferences) = AiTtsSettings(
-        language = p.language ?: publicationLanguage,
+        language = p.language ?: publication.metadata.language,
         overrideContentLanguage = false,
         speed = p.speed ?: 1.0,
         voices = p.voices ?: emptyMap(),
@@ -126,57 +134,152 @@ class AiTtsEngine(
         return m to (m.defaults[lang] ?: m.speakersFor(lang).first().sid)
     }
 
+    private val bookLanguage get() = baseLanguage(settings.value.language?.code)
+
     /** Loads the model for the book's language before the first sentence. */
     suspend fun preload() {
-        val lang = baseLanguage(settings.value.language?.code)
-        val (model, _) = pick(lang) ?: throw IllegalStateException(AiTtsError.NoVoice(lang).message)
+        val (model, _) = pick(bookLanguage) ?: throw IllegalStateException(AiTtsError.NoVoice(bookLanguage).message)
         manager.load(model)
     }
 
-    private var current: Job? = null
-    private var currentId: TtsEngine.RequestId? = null
+    // ---- Synthesis: one worker, the sentence being read first, then the next few ----
 
-    /** Rolling estimate of how long the first clause of a sentence takes to synthesize. */
-    private var firstChunkMs = 400.0
+    private class Audio(val samples: FloatArray, val sampleRate: Int)
+
+    /** A sentence to synthesize, keyed by voice, speed and text. */
+    private inner class Job(text: String, language: String?) {
+        val lang = language ?: bookLanguage
+        val voice = pick(lang) ?: pick(bookLanguage)
+        val speed = settings.value.speed.toFloat()
+        val spoken = if (lang == "zh") converter.toSimplified(text) else text
+        val key = "${voice?.first?.id}:${voice?.second}:$speed:$spoken"
+    }
+
+    private val lock = Any()
+
+    /** Synthesis time ÷ audio length, smoothed; above 1 the phone can't keep up with this voice. */
+    @Volatile var speedRatio = 0.5
+        private set
+    private val ready = object : LinkedHashMap<String, Audio>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Audio>) = size > 16
+    }
+    private val waiting = mutableMapOf<String, CompletableDeferred<Audio>>()
+    private var wanted: Job? = null
+    private var upcoming: List<Job> = emptyList()
+    private val wake = Channel<Unit>(Channel.CONFLATED)
+
+    private val worker = scope.launch(synthDispatcher) {
+        while (true) {
+            // The sentence being read comes first; work ahead only once it's ready.
+            val job = synchronized(lock) {
+                val w = wanted
+                when {
+                    w == null -> null
+                    w.key !in ready -> w
+                    else -> upcoming.firstOrNull { it.key !in ready }
+                }
+            }
+            if (job == null) {
+                wake.receive()
+                continue
+            }
+            val result = runCatching {
+                val (model, sid) = job.voice ?: throw IllegalStateException(AiTtsError.NoVoice(job.lang).message)
+                val tts = manager.load(model)
+                val started = System.nanoTime()
+                val parts = splitLong(job.spoken).map { tts.generateWithConfig(it, GenerationConfig(sid = sid, speed = job.speed)) }
+                val samples = if (parts.size == 1) parts[0].samples else FloatArray(parts.sumOf { it.samples.size }).also { all ->
+                    var at = 0
+                    for (p in parts) { p.samples.copyInto(all, at); at += p.samples.size }
+                }
+                val rate = parts[0].sampleRate
+                val ms = (System.nanoTime() - started) / 1e6
+                val audioMs = samples.size * 1000.0 / rate
+                speedRatio = speedRatio * 0.7 + ms / audioMs.coerceAtLeast(1.0) * 0.3
+                android.util.Log.d("ShelfTts", "synth ${ms.toInt()} ms for ${audioMs.toInt()} ms audio (${job.spoken.length} chars)")
+                Audio(fade(samples, rate), rate)
+            }
+            synchronized(lock) {
+                result.onSuccess { ready[job.key] = it }
+                val waiter = waiting.remove(job.key)
+                result.onSuccess { waiter?.complete(it) }.onFailure { e ->
+                    waiter?.completeExceptionally(e)
+                    // Don't retry a sentence that can't be spoken; move past it.
+                    if (wanted?.key == job.key) wanted = null
+                    upcoming = upcoming.filter { it.key != job.key }
+                }
+            }
+        }
+    }
+
+    private fun audioFor(job: Job): Deferred<Audio> = synchronized(lock) {
+        ready[job.key]?.let { return CompletableDeferred(it) }
+        if (upcoming.none { it.key == job.key }) android.util.Log.d("ShelfTts", "not predicted: ${job.spoken.take(30)}")
+        wanted = job
+        waiting.getOrPut(job.key) { CompletableDeferred() }.also { wake.trySend(Unit) }
+    }
+
+    private var lookahead: kotlinx.coroutines.Job? = null
+    private var lookaheadFrom: String? = null
+
+    /**
+     * Called with the sentence the reader is on: lines up the next few sentences so the worker
+     * synthesizes them while this one plays.
+     */
+    fun onUtterance(locator: Locator) {
+        val here = locator.text.highlight ?: return
+        if (here == lookaheadFrom) return
+        lookaheadFrom = here
+        lookahead?.cancel()
+        lookahead = scope.launch {
+            val tokenizer = TextContentTokenizer(settings.value.language, TextUnit.Sentence, false)
+            val iterator = publication.content(locator)?.iterator() ?: return@launch
+            // Enough sentences to cover ~AHEAD_CHARS of text (a long sentence takes long to synthesize).
+            val next = mutableListOf<Job>()
+            fun enough() = next.size >= MAX_AHEAD || (next.size >= MIN_AHEAD && next.sumOf { it.spoken.length } >= AHEAD_CHARS)
+            fun norm(t: String) = t.filterNot { it.isWhitespace() }
+            val current = norm(here)
+            var first = true
+            while (!enough()) {
+                val element = iterator.nextOrNull() ?: break
+                val sentences = tokenizer.tokenize(element)
+                    .flatMap { (it as? Content.TextElement)?.segments.orEmpty() }
+                    .filter { seg -> seg.text.any { it.isLetterOrDigit() } }
+                // In the paragraph being read, start after the current sentence (all of it if not found).
+                val start = if (first) sentences.indexOfFirst { norm(it.text) == current } + 1 else 0
+                first = false
+                for (seg in sentences.drop(start)) {
+                    if (enough()) break
+                    next += Job(seg.text, baseLanguage(seg.language?.code))
+                }
+            }
+            synchronized(lock) { upcoming = next }
+            wake.trySend(Unit)
+        }
+    }
+
+    private var current: kotlinx.coroutines.Job? = null
+    private var currentId: TtsEngine.RequestId? = null
 
     override fun speak(requestId: TtsEngine.RequestId, text: String, language: Language?) {
         current?.cancel()
         currentId = requestId
+        val job = Job(text, baseLanguage(language?.code))
+        if (job.voice == null) {
+            notify { onError(requestId, AiTtsError.NoVoice(job.lang)) }
+            return
+        }
         current = scope.launch {
-            val lang = baseLanguage(language?.code) ?: baseLanguage(settings.value.language?.code)
-            val voice = pick(lang) ?: pick(baseLanguage(settings.value.language?.code))
-            if (voice == null) {
-                notify { onError(requestId, AiTtsError.NoVoice(lang)) }
-                return@launch
-            }
-            val (model, sid) = voice
             try {
-                val tts = manager.load(model)
-                val spoken = if (lang == "zh") converter.toSimplified(text) else text
-                val config = GenerationConfig(sid = sid, speed = settings.value.speed.toFloat())
-                val audio = Channel<FloatArray>(capacity = 2)
-                launch(synthDispatcher) {
-                    try {
-                        splitForSpeech(spoken).forEachIndexed { i, chunk ->
-                            val started = System.nanoTime()
-                            val samples = tts.generateWithConfig(chunk, config).samples
-                            val ms = (System.nanoTime() - started) / 1e6
-                            if (i == 0) firstChunkMs = firstChunkMs * 0.7 + ms * 0.3
-                            if (samples.isNotEmpty()) audio.send(samples)
-                        }
-                        audio.close()
-                    } catch (e: Throwable) {
-                        audio.close(e)
-                    }
-                }
+                val asked = System.nanoTime()
+                val a = audioFor(job).await()
+                android.util.Log.d("ShelfTts", "waited ${(System.nanoTime() - asked) / 1_000_000} ms for ${a.samples.size * 1000L / a.sampleRate} ms of audio")
                 notify { onStart(requestId) }
                 withContext(Dispatchers.IO) {
-                    player.prepare(tts.sampleRate())
-                    for (samples in audio) player.write(samples)
+                    player.prepare(a.sampleRate)
+                    player.write(a.samples)
                 }
-                // Ask for the next sentence while the end of this one is still playing.
-                val leadMs = (firstChunkMs + 150).coerceIn(200.0, 1500.0)
-                player.awaitPendingBelow((leadMs / 1000 * tts.sampleRate()).toLong())
+                player.awaitPendingBelow(a.sampleRate / 50L)
                 notify { onDone(requestId) }
             } catch (e: CancellationException) {
                 throw e
@@ -196,6 +299,7 @@ class AiTtsEngine(
 
     override fun close() {
         stop()
+        worker.cancel()
         scope.cancel()
         synthDispatcher.close()
         player.release()
@@ -206,26 +310,46 @@ class AiTtsEngine(
     }
 
     companion object {
-        private val CLAUSE_END = setOf('，', ',', '；', ';', '：', ':', '、', '—')
+        private val CLAUSE_END = setOf('；', ';', '：', ':', '，', ',', '、')
 
-        /** Splits a sentence at clause punctuation into pieces worth synthesizing separately. */
-        fun splitForSpeech(text: String): List<String> {
-            val cjk = text.count { it.code in 0x3000..0x9fff }
-            val minLen = if (cjk * 2 > text.length) 8 else 40
-            if (text.length <= minLen * 2) return listOf(text)
+        /**
+         * Very long sentences (common in English novels) are slow to synthesize in one go and can
+         * exceed the model's input limit: split them at clause punctuation. Normal sentences stay
+         * whole so their intonation is kept.
+         */
+        fun splitLong(text: String): List<String> {
+            val cjk = text.count { it.code in 0x3000..0x9fff } * 2 > text.length
+            val max = if (cjk) 80 else 150
+            if (text.length <= max) return listOf(text)
             val pieces = mutableListOf<String>()
             val buf = StringBuilder()
             for (c in text) {
                 buf.append(c)
-                if (c in CLAUSE_END && buf.length >= minLen) {
+                if (c in CLAUSE_END && buf.length >= max / 2) {
                     pieces += buf.toString()
                     buf.clear()
                 }
             }
             if (buf.isNotBlank()) {
-                if (pieces.isNotEmpty() && buf.length < minLen / 2) pieces[pieces.lastIndex] += buf else pieces += buf.toString()
+                if (pieces.isNotEmpty() && buf.length < max / 4) pieces[pieces.lastIndex] += buf else pieces += buf.toString()
             }
             return pieces
+        }
+
+        /** Sentences synthesized ahead of the one being read. */
+        private const val MIN_AHEAD = 3
+        private const val MAX_AHEAD = 10
+        private const val AHEAD_CHARS = 600
+
+        /** 8 ms fade in / out: sentences start and end at silence, without pops. */
+        private fun fade(samples: FloatArray, sampleRate: Int): FloatArray {
+            val n = minOf(sampleRate / 125, samples.size / 2)
+            for (i in 0 until n) {
+                val g = i.toFloat() / n
+                samples[i] *= g
+                samples[samples.size - 1 - i] *= g
+            }
+            return samples
         }
     }
 }
@@ -314,8 +438,13 @@ class AiTtsEngineProvider(
     private val converter: ChineseConverter,
 ) : TtsEngineProvider<AiTtsSettings, AiTtsPreferences, AiTtsPreferencesEditor, AiTtsError, AiVoice> {
 
+    /** The engine created last, so the reader can feed it its position for the lookahead. */
+    var engine: AiTtsEngine? = null
+        private set
+
     override suspend fun createEngine(publication: Publication, initialPreferences: AiTtsPreferences): Try<AiTtsEngine, Error> {
-        val engine = AiTtsEngine(manager, converter, publication.metadata.language, initialPreferences)
+        val engine = AiTtsEngine(manager, converter, publication, initialPreferences)
+        this.engine = engine
         return try {
             engine.preload()
             Try.success(engine)

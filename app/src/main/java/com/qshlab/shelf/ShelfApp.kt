@@ -14,6 +14,7 @@ import com.qshlab.shelf.tts.VoiceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import org.readium.adapter.pdfium.document.PdfiumDocumentFactory
 import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.shared.util.http.DefaultHttpClient
 import org.readium.r2.streamer.PublicationOpener
@@ -48,7 +49,7 @@ class ShelfApp : Application() {
                 this,
                 assetRetriever = assetRetriever,
                 httpClient = httpClient,
-                pdfFactory = null,
+                pdfFactory = PdfiumDocumentFactory(this),
             ),
         )
         val db = Room.databaseBuilder(this, ShelfDatabase::class.java, "shelf.db").build()

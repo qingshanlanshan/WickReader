@@ -54,7 +54,7 @@ object TxtToEpub {
 
     // \s doesn't cover the full-width space (U+3000) that Chinese TXT files use a lot.
     private const val SP = "[\\s\u3000]"
-    private val CHAPTER = Regex(
+    internal val CHAPTER = Regex(
         "^$SP*(" +
             "第[0-9０-９零〇一二两三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]+[章节節回卷集部篇幕话話]($SP.*|[:：、.．].*|)" +
             "|序[章言幕]?($SP.*|[:：].*|)|楔子.*|引子.*|前言|尾[声聲].*|后记|後記|番外.*" +

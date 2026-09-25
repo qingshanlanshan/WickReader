@@ -14,14 +14,20 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
+import org.readium.adapter.pdfium.navigator.PdfiumEngineProvider
+import org.readium.adapter.pdfium.navigator.PdfiumPreferences
+import org.readium.adapter.pdfium.navigator.PdfiumPreferencesEditor
+import org.readium.adapter.pdfium.navigator.PdfiumSettings
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
+import org.readium.r2.navigator.pdf.PdfNavigatorFactory
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 
 class ReaderSession(
     val book: Book,
     val publication: Publication,
-    val navigatorFactory: EpubNavigatorFactory,
+    /** EPUB books (null for PDF). */
+    private val epubFactory: EpubNavigatorFactory?,
     val initialLocator: Locator?,
     /** Whether this session shows the book converted 繁→简. */
     val simplified: Boolean,
@@ -30,7 +36,11 @@ class ReaderSession(
     val translationPair: Pair<String, String>,
     /** Layout the book opens with (the reader can change it live). */
     val layout: PageLayout,
-)
+    val pdfFactory: PdfNavigatorFactory<PdfiumSettings, PdfiumPreferences, PdfiumPreferencesEditor>? = null,
+) {
+    val isPdf get() = pdfFactory != null
+    val navigatorFactory: EpubNavigatorFactory get() = epubFactory ?: error("not an EPUB session")
+}
 
 /** What the book's own language is, as far as we can tell, and what to translate it into. */
 fun Book.translationPair(): Pair<String, String> {
@@ -73,6 +83,18 @@ class ReaderRepository(private val library: LibraryRepository, private val setti
         val book = library.get(bookId) ?: return Result.failure(IllegalStateException("书不存在"))
         val file = File(book.filePath)
         if (!file.exists()) return Result.failure(IllegalStateException("书籍文件丢失"))
+        if (book.format == "pdf") {
+            val publication = library.openPublication(file) ?: return Result.failure(IllegalStateException("无法打开这个 PDF"))
+            val locator = book.locator?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() }
+            val session = ReaderSession(
+                book, publication, null, locator, simplified = false, translation = TranslationMode.OFF,
+                translationPair = book.translationPair(), layout = PageLayout.HORIZONTAL_LTR,
+                pdfFactory = PdfNavigatorFactory(publication, PdfiumEngineProvider()),
+            )
+            sessions[bookId] = session
+            library.touch(bookId)
+            return Result.success(session)
+        }
         val simplified = book.showsSimplified(settings.reader.first().toSimplified)
         val mode = book.translationModeValue()
         val pair = book.translationPair()

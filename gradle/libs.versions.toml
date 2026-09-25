@@ -44,6 +44,8 @@ readium-shared = { module = "org.readium.kotlin-toolkit:readium-shared", version
 readium-streamer = { module = "org.readium.kotlin-toolkit:readium-streamer", version.ref = "readium" }
 readium-navigator = { module = "org.readium.kotlin-toolkit:readium-navigator", version.ref = "readium" }
 readium-opds = { module = "org.readium.kotlin-toolkit:readium-opds", version.ref = "readium" }
+readium-adapter-pdfium-document = { module = "org.readium.kotlin-toolkit:readium-adapter-pdfium-document", version.ref = "readium" }
+readium-adapter-pdfium-navigator = { module = "org.readium.kotlin-toolkit:readium-adapter-pdfium-navigator", version.ref = "readium" }
 readium-navigator-media-tts = { module = "org.readium.kotlin-toolkit:readium-navigator-media-tts", version.ref = "readium" }
 junit = { module = "junit:junit", version.ref = "junit" }
 mlkit-translate = { module = "com.google.mlkit:translate", version.ref = "mlkit-translate" }
