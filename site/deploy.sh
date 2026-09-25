@@ -4,6 +4,8 @@
 # Needs a one-time `npx wrangler@3 login` on this Mac.
 set -euo pipefail
 cd "$(dirname "$0")"
+# Keep public/ flat: wrangler 3 on Node 18.15 skips subfolders (no recursive readdir).
+if find public -mindepth 2 -type f | grep -q .; then echo "public/ must not contain subfolders" >&2; exit 1; fi
 # A private npm cache: ~/.npm on this Mac contains root-owned files that make npx fail.
 export npm_config_cache="${npm_config_cache:-$PWD/.npm-cache}"
 
