@@ -33,6 +33,10 @@ import com.qshlab.shelf.ui.SettingsActivity
 import com.qshlab.shelf.ui.SuggestionsScreen
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.qshlab.shelf.AppLocale.wrap(base))
+    }
+
     private var vm: LibraryViewModel? = null
 
     /** EPUB/TXT opened with or shared to the app. */

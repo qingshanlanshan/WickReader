@@ -75,6 +75,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -275,7 +276,7 @@ private fun ReaderSettingsPanel(
                         .clickable { onChange(s.copy(theme = t)) },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(t.label.take(1), color = if (t == ReaderTheme.DARK) Color(0xFFDDDDDD) else Color(0xFF333333), style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(t.label).take(1), color = if (t == ReaderTheme.DARK) Color(0xFFDDDDDD) else Color(0xFF333333), style = MaterialTheme.typography.labelMedium)
                 }
             }
         }
@@ -285,7 +286,7 @@ private fun ReaderSettingsPanel(
         Label("字体")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ReaderFont.entries.forEach { f ->
-                FilterChip(selected = s.font == f, onClick = { onChange(s.copy(font = f)) }, label = { Text(f.label) })
+                FilterChip(selected = s.font == f, onClick = { onChange(s.copy(font = f)) }, label = { Text(stringResource(f.label)) })
             }
         }
 
@@ -296,7 +297,7 @@ private fun ReaderSettingsPanel(
         if (layoutChoices.size > 1) layoutChoices.forEach { l ->
             Row(Modifier.fillMaxWidth().clickable { if (l != layout) onLayoutChange(l) }.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(selected = l == layout, onClick = { if (l != layout) onLayoutChange(l) })
-                Text(l.label, style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(l.label), style = MaterialTheme.typography.bodyMedium)
             }
         }
 
@@ -320,7 +321,7 @@ private fun ReaderSettingsPanel(
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             TranslationMode.entries.forEach { m ->
-                FilterChip(selected = translation == m, onClick = { if (m != translation) onTranslationChange(m) }, label = { Text(m.label) })
+                FilterChip(selected = translation == m, onClick = { if (m != translation) onTranslationChange(m) }, label = { Text(stringResource(m.label)) })
             }
         }
     }

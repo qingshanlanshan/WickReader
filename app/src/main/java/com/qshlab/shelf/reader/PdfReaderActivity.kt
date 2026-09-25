@@ -90,6 +90,10 @@ import org.readium.r2.shared.publication.services.positions
  */
 @OptIn(ExperimentalReadiumApi::class, FlowPreview::class, ExperimentalMaterial3Api::class)
 class PdfReaderActivity : FragmentActivity() {
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.qshlab.shelf.AppLocale.wrap(base))
+    }
+
 
     private var bookId: Long = -1
     private lateinit var session: ReaderSession

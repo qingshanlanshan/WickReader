@@ -24,6 +24,10 @@ private val Context.dataStore by preferencesDataStore(name = "settings")
 
 /** Holds the app-wide singletons (no DI framework needed at this size). */
 class ShelfApp : Application() {
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.qshlab.shelf.AppLocale.wrap(base))
+    }
+
     lateinit var library: LibraryRepository
         private set
     lateinit var readers: ReaderRepository

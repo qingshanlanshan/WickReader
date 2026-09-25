@@ -67,6 +67,10 @@ import kotlinx.coroutines.withContext
 
 /** App-level settings; its own activity so the reader can open it without leaving the book. */
 class SettingsActivity : ComponentActivity() {
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.qshlab.shelf.AppLocale.wrap(base))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

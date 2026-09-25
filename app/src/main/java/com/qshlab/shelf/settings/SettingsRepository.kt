@@ -1,6 +1,8 @@
 package com.qshlab.shelf.settings
 
+import androidx.annotation.StringRes
 import androidx.datastore.core.DataStore
+import com.qshlab.shelf.R
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
@@ -13,26 +15,26 @@ import kotlinx.coroutines.flow.map
 enum class ViewMode { GRID, LIST, COMPACT }
 
 /** How the bookshelf is organized. */
-enum class GroupBy(val label: String) {
-    SERIES("按系列"),
-    BOOKS("按书"),
-    AUTHORS("按作者"),
+enum class GroupBy(@StringRes val label: Int) {
+    SERIES(R.string.group_series),
+    BOOKS(R.string.group_books),
+    AUTHORS(R.string.group_authors),
 }
 
-enum class SortOrder(val label: String) {
-    RECENT_READ("最近阅读"),
-    RECENT_ADDED("最近添加"),
-    TITLE("书名"),
-    AUTHOR("作者"),
-    PROGRESS("阅读进度"),
+enum class SortOrder(@StringRes val label: Int) {
+    RECENT_READ(R.string.sort_recent_read),
+    RECENT_ADDED(R.string.sort_recent_added),
+    TITLE(R.string.sort_title),
+    AUTHOR(R.string.sort_author),
+    PROGRESS(R.string.sort_progress),
 }
 
-enum class StatusFilter(val label: String) {
-    ALL("全部"),
-    READING("在读"),
-    WANT("想读"),
-    UNREAD("未读"),
-    FINISHED("已读完"),
+enum class StatusFilter(@StringRes val label: Int) {
+    ALL(R.string.status_all),
+    READING(R.string.status_reading),
+    WANT(R.string.status_want),
+    UNREAD(R.string.status_unread),
+    FINISHED(R.string.status_finished),
 }
 
 data class LibrarySettings(
@@ -48,15 +50,15 @@ data class LibrarySettings(
     val filtering get() = status != StatusFilter.ALL || language != null || format != null
 }
 
-enum class ReaderTheme(val label: String) { LIGHT("日间"), SEPIA("护眼"), DARK("夜间") }
+enum class ReaderTheme(@StringRes val label: Int) { LIGHT(R.string.theme_light), SEPIA(R.string.theme_sepia), DARK(R.string.theme_dark) }
 
-enum class ReaderFont(val label: String) { SANS("黑体"), SERIF("宋体"), ORIGINAL("书籍原字体") }
+enum class ReaderFont(@StringRes val label: Int) { SANS(R.string.font_sans), SERIF(R.string.font_serif), ORIGINAL(R.string.font_original) }
 
 /** Text direction and page order, set per book. */
-enum class PageLayout(val label: String) {
-    HORIZONTAL_LTR("横排 · 下一页在右"),
-    HORIZONTAL_RTL("横排 · 下一页在左"),
-    VERTICAL_RTL("竖排 · 下一页在左（日式）"),
+enum class PageLayout(@StringRes val label: Int) {
+    HORIZONTAL_LTR(R.string.layout_horizontal_ltr),
+    HORIZONTAL_RTL(R.string.layout_horizontal_rtl),
+    VERTICAL_RTL(R.string.layout_vertical_rtl),
 }
 
 data class ReaderSettings(

@@ -3,7 +3,11 @@ package com.qshlab.shelf.translate
 import java.io.File
 import java.security.MessageDigest
 
-enum class TranslationMode(val label: String) { OFF("关闭"), BILINGUAL("双语对照"), TRANSLATED("仅译文") }
+enum class TranslationMode(@androidx.annotation.StringRes val label: Int) {
+    OFF(com.qshlab.shelf.R.string.translation_off),
+    BILINGUAL(com.qshlab.shelf.R.string.translation_bilingual),
+    TRANSLATED(com.qshlab.shelf.R.string.translation_only),
+}
 
 /**
  * Translates the paragraphs and headings of one (X)HTML chapter. Results are cached on disk per

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">青灯</string>
+    <string name="group_series">按系列</string>
+    <string name="group_books">按书</string>
+    <string name="group_authors">按作者</string>
+    <string name="sort_recent_read">最近阅读</string>
+    <string name="sort_recent_added">最近添加</string>
+    <string name="sort_title">书名</string>
+    <string name="sort_author">作者</string>
+    <string name="sort_progress">阅读进度</string>
+    <string name="status_all">全部</string>
+    <string name="status_reading">在读</string>
+    <string name="status_want">想读</string>
+    <string name="status_unread">未读</string>
+    <string name="status_finished">已读完</string>
+    <string name="theme_light">日间</string>
+    <string name="theme_sepia">护眼</string>
+    <string name="theme_dark">夜间</string>
+    <string name="font_sans">黑体</string>
+    <string name="font_serif">宋体</string>
+    <string name="font_original">书籍原字体</string>
+    <string name="layout_horizontal_ltr">横排 · 下一页在右</string>
+    <string name="layout_horizontal_rtl">横排 · 下一页在左</string>
+    <string name="layout_vertical_rtl">竖排 · 下一页在左（日式）</string>
+    <string name="translation_off">关闭</string>
+    <string name="translation_bilingual">双语对照</string>
+    <string name="translation_only">仅译文</string>
+    <string name="lang_zh">中文</string>
+    <string name="lang_zh_hant">繁体中文</string>
+    <string name="lang_en">英文</string>
+    <string name="lang_ja">日文</string>
+    <string name="app_language">语言</string>
+    <string name="app_language_system">跟随系统</string>
+</resources>

@@ -1,3 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Shelf</string>
+    <string name="app_name">Qingdeng</string>
+    <string name="group_series">By series</string>
+    <string name="group_books">By book</string>
+    <string name="group_authors">By author</string>
+    <string name="sort_recent_read">Recently read</string>
+    <string name="sort_recent_added">Recently added</string>
+    <string name="sort_title">Title</string>
+    <string name="sort_author">Author</string>
+    <string name="sort_progress">Progress</string>
+    <string name="status_all">All</string>
+    <string name="status_reading">Reading</string>
+    <string name="status_want">Want to read</string>
+    <string name="status_unread">Unread</string>
+    <string name="status_finished">Finished</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_sepia">Sepia</string>
+    <string name="theme_dark">Dark</string>
+    <string name="font_sans">Sans</string>
+    <string name="font_serif">Serif</string>
+    <string name="font_original">Book\'s font</string>
+    <string name="layout_horizontal_ltr">Horizontal · next page on the right</string>
+    <string name="layout_horizontal_rtl">Horizontal · next page on the left</string>
+    <string name="layout_vertical_rtl">Vertical · next page on the left (Japanese style)</string>
+    <string name="translation_off">Off</string>
+    <string name="translation_bilingual">Side by side</string>
+    <string name="translation_only">Translation only</string>
+    <string name="lang_zh">Chinese</string>
+    <string name="lang_zh_hant">Traditional Chinese</string>
+    <string name="lang_en">English</string>
+    <string name="lang_ja">Japanese</string>
+    <string name="app_language">Language</string>
+    <string name="app_language_system">Follow system</string>
 </resources>

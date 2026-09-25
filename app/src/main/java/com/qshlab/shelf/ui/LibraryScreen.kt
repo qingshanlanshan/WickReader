@@ -71,6 +71,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
@@ -326,20 +327,20 @@ private fun ShelfControls(state: LibraryState, vm: LibraryViewModel) {
     ) {
         item {
             Box {
-                MenuChip(s.groupBy.label) { open = "group" }
+                MenuChip(stringResource(s.groupBy.label)) { open = "group" }
                 DropdownMenu(expanded = open == "group", onDismissRequest = { open = null }) {
                     GroupBy.entries.forEach { g ->
-                        DropdownMenuItem(text = { Text(g.label + if (g == s.groupBy) "  ✓" else "") }, onClick = { open = null; vm.updateSettings { it.copy(groupBy = g) } })
+                        DropdownMenuItem(text = { Text(stringResource(g.label) + if (g == s.groupBy) "  ✓" else "") }, onClick = { open = null; vm.updateSettings { it.copy(groupBy = g) } })
                     }
                 }
             }
         }
         item {
             Box {
-                MenuChip(s.sort.label) { open = "sort" }
+                MenuChip(stringResource(s.sort.label)) { open = "sort" }
                 DropdownMenu(expanded = open == "sort", onDismissRequest = { open = null }) {
                     SortOrder.entries.forEach { o ->
-                        DropdownMenuItem(text = { Text(o.label + if (o == s.sort) "  ✓" else "") }, onClick = { open = null; vm.updateSettings { it.copy(sort = o) } })
+                        DropdownMenuItem(text = { Text(stringResource(o.label) + if (o == s.sort) "  ✓" else "") }, onClick = { open = null; vm.updateSettings { it.copy(sort = o) } })
                     }
                 }
             }
@@ -347,7 +348,7 @@ private fun ShelfControls(state: LibraryState, vm: LibraryViewModel) {
         item {
             Box {
                 val active = listOfNotNull(
-                    s.status.takeIf { it != StatusFilter.ALL }?.label,
+                    s.status.takeIf { it != StatusFilter.ALL }?.let { stringResource(it.label) },
                     s.language?.let(::languageLabel),
                     s.format?.uppercase(),
                 )
@@ -360,7 +361,7 @@ private fun ShelfControls(state: LibraryState, vm: LibraryViewModel) {
                 DropdownMenu(expanded = open == "filter", onDismissRequest = { open = null }) {
                     MenuHeader("阅读状态")
                     StatusFilter.entries.forEach { f ->
-                        DropdownMenuItem(text = { Text(f.label + if (f == s.status) "  ✓" else "") }, onClick = { vm.updateSettings { it.copy(status = f) } })
+                        DropdownMenuItem(text = { Text(stringResource(f.label) + if (f == s.status) "  ✓" else "") }, onClick = { vm.updateSettings { it.copy(status = f) } })
                     }
                     if (state.languages.size > 1) {
                         HorizontalDivider()

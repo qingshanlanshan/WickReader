@@ -77,6 +77,10 @@ import org.readium.r2.shared.util.getOrElse
 
 @OptIn(ExperimentalReadiumApi::class, FlowPreview::class)
 class ReaderActivity : FragmentActivity() {
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.qshlab.shelf.AppLocale.wrap(base))
+    }
+
 
     private var bookId: Long = -1
     private lateinit var session: ReaderSession
