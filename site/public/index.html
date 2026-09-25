@@ -252,7 +252,7 @@
   phs.forEach(function (n) { T.zh[n.getAttribute("data-i18n-ph")] = n.getAttribute("placeholder"); });
 
   // International tips: set to the Ko-fi page URL to show the button.
-  var KOFI_URL = "";
+  var KOFI_URL = "https://ko-fi.com/qingshanlanshan";
   if (KOFI_URL) { var k = document.getElementById("kofi"); k.href = KOFI_URL; k.hidden = false; }
 
   document.getElementById("fbForm").addEventListener("submit", function (e) {

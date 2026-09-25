@@ -34,7 +34,7 @@ import com.qshlab.shelf.R
 private const val WECHAT = "com.tencent.mm"
 
 /** International tips (card / PayPal); null hides the button. */
-private val KOFI_URL: String? = null
+private val KOFI_URL: String? = "https://ko-fi.com/qingshanlanshan"
 
 /**
  * "Support the author": the WeChat tip code, and a way to use it from the same phone (a code on
