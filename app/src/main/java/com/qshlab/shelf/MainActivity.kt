@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
                     composable("scan") { ScanScreen(vm) { nav.popBackStack() } }
                     composable("suggestions") { SuggestionsScreen(vm) { nav.popBackStack() } }
                     composable("catalogs") {
-                        CatalogsScreen(onBack = { nav.popBackStack() }, onOpen = { c -> nav.navigate("feed?title=${Uri.encode(c.name)}&url=${Uri.encode(c.url)}") })
+                        CatalogsScreen(onBack = { nav.popBackStack() }, onOpen = { name, url -> nav.navigate("feed?title=${Uri.encode(name)}&url=${Uri.encode(url)}") })
                     }
                     composable("feed?title={title}&url={url}") { entry ->
                         FeedScreen(

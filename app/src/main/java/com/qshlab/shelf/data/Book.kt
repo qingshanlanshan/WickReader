@@ -63,12 +63,16 @@ fun Book.languageKey(): String? {
     return if (title.any { it in '\u4e00'..'\u9fff' }) "zh" else null
 }
 
-fun languageLabel(key: String): String = when (key) {
-    "zh" -> "中文"
-    "zh-Hant" -> "繁体中文"
-    "en" -> "英文"
-    "ja" -> "日文"
-    else -> java.util.Locale.forLanguageTag(key).getDisplayLanguage(java.util.Locale.CHINESE).ifBlank { key }
+/** A language key's name in the app's language. */
+fun languageLabel(key: String): String {
+    val context = com.qshlab.shelf.ShelfApp.instance
+    return when (key) {
+        "zh" -> context.getString(com.qshlab.shelf.R.string.lang_zh)
+        "zh-Hant" -> context.getString(com.qshlab.shelf.R.string.lang_zh_hant)
+        "en" -> context.getString(com.qshlab.shelf.R.string.lang_en)
+        "ja" -> context.getString(com.qshlab.shelf.R.string.lang_ja)
+        else -> java.util.Locale.forLanguageTag(key).getDisplayLanguage(context.resources.configuration.locales[0]).ifBlank { key }
+    }
 }
 
 @Dao

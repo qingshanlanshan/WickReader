@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Reader: top bar and common actions -->
+    <string name="rd_back">Back</string>
+    <string name="rd_read_aloud">Read aloud</string>
+    <string name="rd_search">Search</string>
+    <string name="rd_bookmark_add">Add bookmark</string>
+    <string name="rd_bookmark_remove">Remove bookmark</string>
+    <string name="rd_contents">Contents</string>
+    <string name="rd_reading_settings">Reading settings</string>
+    <string name="rd_display_settings">Display settings</string>
+    <string name="rd_close">Close</string>
+    <string name="rd_page_progress">Page %1$d of %2$d · %3$d%%</string>
+
+    <!-- Reader: text selection menu and toasts -->
+    <string name="rd_look_up">Look up</string>
+    <string name="rd_highlight">Highlight</string>
+    <string name="rd_note">Note</string>
+    <string name="rd_copy">Copy</string>
+    <string name="rd_copied">Copied</string>
+    <string name="rd_bookmark">Bookmark</string>
+    <string name="rd_bookmark_added">Bookmark added</string>
+    <string name="rd_bookmark_removed">Bookmark removed</string>
+
+    <!-- Reader: settings panel -->
+    <string name="rd_theme">Theme</string>
+    <string name="rd_font_size">Font size</string>
+    <string name="rd_font">Font</string>
+    <string name="rd_line_spacing">Line spacing</string>
+    <string name="rd_margins">Margins</string>
+    <string name="rd_layout_this_book">Layout (this book)</string>
+    <string name="rd_scroll">Scroll instead of pages</string>
+    <string name="rd_publisher_styles">Use the book\'s own formatting</string>
+    <string name="rd_volume_keys">Turn pages with volume keys</string>
+    <string name="rd_chinese_conversion">Traditional / Simplified Chinese</string>
+    <string name="rd_book_simplified">Show this book in Simplified Chinese</string>
+    <string name="rd_book_simplified_detected">Show this book in Simplified Chinese (Traditional detected)</string>
+    <string name="rd_default_simplified">Show Traditional Chinese books in Simplified by default</string>
+    <string name="rd_translate_book">Translate whole book (offline)</string>
+    <string name="rd_decrease">Decrease</string>
+    <string name="rd_increase">Increase</string>
+
+    <!-- Reader: contents / bookmarks / notes / search / highlight sheets -->
+    <string name="rd_tab_bookmarks">Bookmarks %1$d</string>
+    <string name="rd_tab_notes">Notes %1$d</string>
+    <string name="rd_no_toc">This book has no table of contents</string>
+    <string name="rd_no_bookmarks">No bookmarks yet. Tap the bookmark button at the top while reading to add one.</string>
+    <string name="rd_no_notes">No notes yet. Select some text, then tap “Highlight” or “Note”.</string>
+    <string name="rd_delete">Delete</string>
+    <string name="rd_search_hint">Search in book</string>
+    <string name="rd_search_none">No results</string>
+    <plurals name="rd_search_found">
+        <item quantity="one">%1$d result</item>
+        <item quantity="other">%1$d results</item>
+    </plurals>
+    <string name="rd_search_found_limited">%1$d results (showing the first 300)</string>
+    <string name="rd_delete_highlight">Delete highlight</string>
+    <string name="rd_save">Save</string>
+
+    <!-- Reader: PDF -->
+    <string name="rd_pdf_page_turn">Page turning</string>
+    <string name="rd_pdf_paged">Page by page</string>
+    <string name="rd_pdf_scroll">Continuous scroll</string>
+    <string name="rd_pdf_page_size">Page size</string>
+    <string name="rd_pdf_fit_width">Fit width</string>
+    <string name="rd_pdf_fit_page">Whole page</string>
+    <string name="rd_pdf_hint">Pinch to zoom. PDFs don\'t support font changes, Chinese conversion or read-aloud.</string>
+    <string name="rd_pdf_bookmark_text">Page %1$s</string>
+
+    <!-- Reader: read aloud -->
+    <string name="rd_tts_loading_ai">Loading AI voice…</string>
+    <string name="rd_tts_ai_failed">Couldn\'t load the AI voice. Using the phone\'s built-in voice instead.</string>
+    <string name="rd_tts_unsupported">This book can\'t be read aloud</string>
+    <string name="rd_tts_start_failed">Couldn\'t start reading aloud: %1$s</string>
+    <string name="rd_tts_slow">This phone synthesizes this voice slowly, so there may be pauses between sentences. You can switch to the faster “Biaobei female” voice under Voice.</string>
+    <string name="rd_tts_missing_data">Your phone has no voice data for this language. Please download it in system settings.</string>
+    <string name="rd_tts_error">Read-aloud error: %1$s</string>
+    <string name="rd_voice_ai">AI · %1$s · %2$s</string>
+    <string name="rd_voice_system">System · %1$s · %2$s</string>
+    <string name="rd_voice_needs_network">Needs internet</string>
+    <string name="rd_voice_quality_high">High quality</string>
+    <string name="rd_voice_quality_normal">Normal</string>
+    <string name="rd_voice_quality_low">Low</string>
+    <string name="rd_voice_use_system">Use the phone\'s built-in voice</string>
+    <string name="rd_voice_download">⬇ Download more natural AI voices…</string>
+    <string name="rd_voice_ai_unsupported">⬇ AI voices don\'t support this language yet</string>
+    <string name="rd_choose_voice">Choose voice</string>
+    <string name="rd_voice_help">“AI” voices are offline AI voices (download them in Settings); “System” voices come from your phone\'s speech engine.</string>
+    <string name="rd_no_voices">No voices available</string>
+    <string name="rd_tts_speed">Reading speed</string>
+    <string name="rd_speed_normal">%1$s (normal)</string>
+    <string name="rd_previous_sentence">Previous sentence</string>
+    <string name="rd_next_sentence">Next sentence</string>
+    <string name="rd_play">Play</string>
+    <string name="rd_pause">Pause</string>
+    <string name="rd_stop_reading">Stop reading aloud</string>
+
+    <!-- Reader: errors when opening a book -->
+    <string name="rd_err_book_missing">Book not found</string>
+    <string name="rd_err_file_missing">The book file is missing</string>
+    <string name="rd_err_pdf_open">Can\'t open this PDF</string>
+    <string name="rd_err_book_open">Can\'t open this book</string>
+
+    <!-- Translation -->
+    <string name="tr_lang_ko">Korean</string>
+    <string name="tr_lang_fr">French</string>
+    <string name="tr_lang_de">German</string>
+    <string name="tr_lang_es">Spanish</string>
+    <string name="tr_lang_ru">Russian</string>
+    <string name="tr_translate_from">%1$s →</string>
+    <string name="tr_translating">Translating…</string>
+    <string name="tr_first_download">First use: downloading the %1$s → %2$s translation model (about 30 MB, one time only)…</string>
+    <string name="tr_failed">Translation failed: %1$s</string>
+    <string name="tr_failed_hint">check your connection and try again (the first use downloads a model)</string>
+    <string name="tr_bing_dict">Bing Dictionary</string>
+    <string name="tr_apps_hint">Tip: dictionary or translation apps you install (such as Eudic or Google Translate) will show up here.</string>
+    <string name="tr_downloading_models">Downloading translation models (about 30 MB per language, one time only)…</string>
+    <string name="tr_download_failed">Model download failed. Connect to the internet and try again.</string>
+</resources>

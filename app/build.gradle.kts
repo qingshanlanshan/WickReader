@@ -15,8 +15,8 @@ android {
         applicationId = "com.qshlab.shelf"
         minSdk = 26
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.3.1"
+        versionCode = 5
+        versionName = "0.4.0"
         // 64-bit ARM covers practically every phone from the last ~8 years; the ML Kit
         // translation engine alone is ~16 MB per architecture.
         ndk { abiFilters += "arm64-v8a" }

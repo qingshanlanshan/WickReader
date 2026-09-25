@@ -36,6 +36,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.qshlab.shelf.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -69,40 +71,40 @@ fun TtsBar(
         shadowElevation = 6.dp,
     ) {
         Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { pickVoice = true }) { Icon(Icons.Filled.RecordVoiceOver, "选择音色") }
+            IconButton(onClick = { pickVoice = true }) { Icon(Icons.Filled.RecordVoiceOver, stringResource(R.string.rd_choose_voice)) }
             Box {
                 TextButton(onClick = { pickSpeed = true }) {
                     Text(speedLabel(speed), fontWeight = FontWeight.SemiBold)
                 }
                 DropdownMenu(expanded = pickSpeed, onDismissRequest = { pickSpeed = false }) {
-                    Text("朗读速度", Modifier.padding(horizontal = 16.dp, vertical = 6.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.rd_tts_speed), Modifier.padding(horizontal = 16.dp, vertical = 6.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     TTS_SPEEDS.forEach { v ->
                         val selected = kotlin.math.abs(v - speed) < 0.001
                         DropdownMenuItem(
-                            text = { Text(speedLabel(v) + if (v == 1.0) "（正常）" else "", fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal) },
+                            text = { Text(if (v == 1.0) stringResource(R.string.rd_speed_normal, speedLabel(v)) else speedLabel(v), fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal) },
                             trailingIcon = { if (selected) Icon(Icons.Filled.Check, null) },
                             onClick = { pickSpeed = false; onSpeed(v) },
                         )
                     }
                 }
             }
-            IconButton(onClick = onPrevious) { Icon(Icons.Filled.SkipPrevious, "上一句") }
-            FilledIconButton(onClick = onPlayPause) { Icon(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, if (playing) "暂停" else "播放") }
-            IconButton(onClick = onNext) { Icon(Icons.Filled.SkipNext, "下一句") }
-            IconButton(onClick = onStop) { Icon(Icons.Filled.Close, "停止朗读") }
+            IconButton(onClick = onPrevious) { Icon(Icons.Filled.SkipPrevious, stringResource(R.string.rd_previous_sentence)) }
+            FilledIconButton(onClick = onPlayPause) { Icon(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, stringResource(if (playing) R.string.rd_pause else R.string.rd_play)) }
+            IconButton(onClick = onNext) { Icon(Icons.Filled.SkipNext, stringResource(R.string.rd_next_sentence)) }
+            IconButton(onClick = onStop) { Icon(Icons.Filled.Close, stringResource(R.string.rd_stop_reading)) }
         }
     }
     if (pickVoice) {
         ModalBottomSheet(onDismissRequest = { pickVoice = false }) {
             Column(Modifier.padding(bottom = 24.dp)) {
-                Text("选择音色", Modifier.padding(horizontal = 20.dp, vertical = 8.dp), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.rd_choose_voice), Modifier.padding(horizontal = 20.dp, vertical = 8.dp), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "「AI」开头的是离线 AI 语音（在设置里下载）；「系统」开头的是手机自带的语音引擎。",
+                    stringResource(R.string.rd_voice_help),
                     Modifier.padding(horizontal = 20.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (voices.isEmpty()) Text("没有可选的声音", Modifier.padding(20.dp))
+                if (voices.isEmpty()) Text(stringResource(R.string.rd_no_voices), Modifier.padding(20.dp))
                 LazyColumn {
                     items(voices, key = { it.id }) { v ->
                         Text(

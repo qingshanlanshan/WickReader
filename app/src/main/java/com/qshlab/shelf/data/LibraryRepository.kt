@@ -10,6 +10,7 @@ import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import com.qshlab.shelf.R
 import com.qshlab.shelf.chinese.ChineseConverter
 import com.qshlab.shelf.settings.PageLayout
 import com.qshlab.shelf.translate.ChapterTranslator
@@ -63,7 +64,8 @@ val UNSUPPORTED_EBOOK_EXTENSIONS = setOf("mobi", "azw", "azw3", "prc", "djvu", "
 
 sealed interface ImportResult {
     data class Added(val book: Book) : ImportResult
-    data class Skipped(val name: String, val reason: String) : ImportResult
+    /** [duplicate]: the same file (name and size) is already on the shelf. */
+    data class Skipped(val name: String, val reason: String, val duplicate: Boolean = false) : ImportResult
 }
 
 /**
@@ -131,17 +133,17 @@ class LibraryRepository(
             val (name, size) = if (knownName != null && knownSize != null) knownName to knownSize else queryNameAndSize(uri)
             val ext = Converters.extensionOf(name)
             if (ext !in SUPPORTED_EXTENSIONS) return@withContext ImportResult.Skipped(name, unsupportedReason(ext))
-            if (dao.countDuplicates(name, size) > 0) return@withContext ImportResult.Skipped(name, "已在书架中")
+            if (dao.countDuplicates(name, size) > 0) return@withContext ImportResult.Skipped(name, context.getString(R.string.imp_already), duplicate = true)
             val temp = File(context.cacheDir, "import-${UUID.randomUUID()}.tmp")
             val copied = runCatching {
                 context.contentResolver.openInputStream(uri)!!.use { input -> temp.outputStream().use { input.copyTo(it) } }
             }
-            if (copied.isFailure) return@withContext ImportResult.Skipped(name, "无法读取文件")
+            if (copied.isFailure) return@withContext ImportResult.Skipped(name, context.getString(R.string.imp_cannot_read))
             importFile(temp, name, move = true)
         }
 
     private fun unsupportedReason(ext: String) =
-        if (ext in UNSUPPORTED_EBOOK_EXTENSIONS) "暂不支持 .$ext（可用 Calibre 转成 EPUB）" else "暂不支持 .$ext"
+        context.getString(if (ext in UNSUPPORTED_EBOOK_EXTENSIONS) R.string.imp_unsupported_ebook else R.string.imp_unsupported, ext)
 
     private suspend fun importFile(source: File, name: String, move: Boolean): ImportResult {
         val ext = Converters.extensionOf(name)
@@ -152,7 +154,7 @@ class LibraryRepository(
         val size = source.length()
         if (dao.countDuplicates(name, size) > 0) {
             if (move) source.delete()
-            return ImportResult.Skipped(name, "已在书架中")
+            return ImportResult.Skipped(name, context.getString(R.string.imp_already), duplicate = true)
         }
         // TXT, FB2, DOCX, HTML and CBZ are converted once into an EPUB; PDF is kept as is.
         val dest = File(booksDir, "${UUID.randomUUID()}.${if (ext == "pdf") "pdf" else "epub"}")
@@ -161,18 +163,18 @@ class LibraryRepository(
             if (move) source.delete()
             if (converted.isFailure) {
                 dest.delete()
-                return ImportResult.Skipped(name, "无法解析这个 ${ext.uppercase()}")
+                return ImportResult.Skipped(name, context.getString(R.string.imp_cannot_parse, ext.uppercase()))
             }
         } else if (ext == "txt" || ext == "md") {
             val converted = runCatching { TxtToEpub.convert(source, name, dest) }
             if (move) source.delete()
             if (converted.isFailure) {
                 dest.delete()
-                return ImportResult.Skipped(name, "无法解析这个 TXT")
+                return ImportResult.Skipped(name, context.getString(R.string.imp_cannot_parse, "TXT"))
             }
             if (converted.getOrThrow().chapters.all { it.lines.all(String::isBlank) }) {
                 dest.delete()
-                return ImportResult.Skipped(name, "文件是空的")
+                return ImportResult.Skipped(name, context.getString(R.string.imp_empty))
             }
         } else if (move && source.renameTo(dest).not()) {
             source.copyTo(dest)
@@ -183,7 +185,7 @@ class LibraryRepository(
 
         val publication = openPublication(dest) ?: run {
             dest.delete()
-            return ImportResult.Skipped(name, "文件损坏或格式不支持")
+            return ImportResult.Skipped(name, context.getString(R.string.imp_broken))
         }
         try {
             val book = describe(publication, dest, name, size).copy(isTraditional = ext != "pdf" && detectTraditional(publication))

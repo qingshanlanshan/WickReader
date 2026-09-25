@@ -49,10 +49,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import com.qshlab.shelf.R
 import com.qshlab.shelf.data.BookScanner
 import com.qshlab.shelf.settings.AppSettings
 import com.qshlab.shelf.shelfApp
@@ -91,9 +93,9 @@ fun ScanScreen(vm: LibraryViewModel, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
-                title = { Text("扫描手机中的电子书") },
-                actions = { if (access) IconButton(onClick = ::scan) { Icon(Icons.Filled.Refresh, "重新扫描") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.set_back)) } },
+                title = { Text(stringResource(R.string.set_scan_title)) },
+                actions = { if (access) IconButton(onClick = ::scan) { Icon(Icons.Filled.Refresh, stringResource(R.string.set_rescan)) } },
             )
         },
         bottomBar = {
@@ -103,12 +105,12 @@ fun ScanScreen(vm: LibraryViewModel, onBack: () -> Unit) {
                     Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         val selectable = list.filter { !it.inLibrary && it.supported }.map { it.file.path }.toSet()
                         val all = selected.containsAll(selectable)
-                        TextButton(onClick = { selected = if (all) emptySet() else selectable }) { Text(if (all) "全不选" else "全选") }
+                        TextButton(onClick = { selected = if (all) emptySet() else selectable }) { Text(stringResource(if (all) R.string.set_select_none else R.string.set_select_all)) }
                         Box(Modifier.weight(1f))
                         Button(enabled = selected.isNotEmpty(), onClick = {
                             vm.importScanned(list.filter { it.file.path in selected }.map { it.file })
                             onBack()
-                        }) { Text("导入 ${selected.size} 本") }
+                        }) { Text(stringResource(R.string.set_import_count, selected.size)) }
                     }
                 }
             }
@@ -117,9 +119,9 @@ fun ScanScreen(vm: LibraryViewModel, onBack: () -> Unit) {
         Column(Modifier.padding(padding).fillMaxSize()) {
             if (!access) {
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("需要「所有文件访问权限」", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.set_scan_need_access), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "扫描手机里的电子书需要读取存储空间的权限。书只会被复制到本应用里，不会上传到任何地方。",
+                        stringResource(R.string.set_scan_access_desc),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Button(onClick = {
@@ -130,7 +132,7 @@ fun ScanScreen(vm: LibraryViewModel, onBack: () -> Unit) {
                         } else {
                             requestLegacy.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
                         }
-                    }) { Text("去授权") }
+                    }) { Text(stringResource(R.string.set_grant_access)) }
                 }
                 return@Column
             }
@@ -139,20 +141,21 @@ fun ScanScreen(vm: LibraryViewModel, onBack: () -> Unit) {
                     val on = f.key in appSettings.scanFormats
                     FilterChip(selected = on, onClick = {
                         scope.launch { app.settings.updateApp(appSettings.copy(scanFormats = if (on) appSettings.scanFormats - f.key else appSettings.scanFormats + f.key)) }
-                    }, label = { Text(f.label) })
+                    }, label = { Text(stringResource(f.label)) })
                 }
             }
             val list = results
             when {
                 scanning || list == null -> Row(Modifier.padding(24.dp), verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.padding(end = 16.dp))
-                    Text("正在扫描…")
+                    Text(stringResource(R.string.set_scanning))
                 }
-                list.isEmpty() -> Text("没有找到电子书", Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                list.isEmpty() -> Text(stringResource(R.string.set_scan_none), Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else -> {
                     Text(
-                        "找到 ${list.size} 个文件，其中 ${list.count { it.inLibrary }} 个已在书架" +
-                            if (appSettings.scanTxtMinKb > 0 && "txt" in appSettings.scanFormats) "（已忽略小于 ${appSettings.scanTxtMinKb} KB 的 TXT / 网页）" else "",
+                        if (appSettings.scanTxtMinKb > 0 && "txt" in appSettings.scanFormats)
+                            stringResource(R.string.set_scan_summary_ignored, list.size, list.count { it.inLibrary }, appSettings.scanTxtMinKb)
+                        else stringResource(R.string.set_scan_summary, list.size, list.count { it.inLibrary }),
                         Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -181,8 +184,8 @@ fun ScanScreen(vm: LibraryViewModel, onBack: () -> Unit) {
                                         Text(f.file.name, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                         Text(
                                             Formatter.formatShortFileSize(context, f.size) + when {
-                                                f.inLibrary -> " · 已在书架"
-                                                !f.supported -> " · 暂不支持，可用 Calibre 转成 EPUB"
+                                                f.inLibrary -> " · " + stringResource(R.string.set_scan_in_library)
+                                                !f.supported -> " · " + stringResource(R.string.set_scan_unsupported)
                                                 else -> ""
                                             },
                                             style = MaterialTheme.typography.bodySmall,

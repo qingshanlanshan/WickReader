@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Single-colour lamp for Android 13 themed icons. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M54,27 C58.5,34 62,39.5 62,45.5 A8,8 0,0 1,46 45.5 C46,39.5 49.5,34 54,27 Z" />
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M36,52.5 L72,52.5 A1.5,1.5 0,0 1,72 55.5 L71.6,55.5 C70,62 63,65.5 57,65.5 L58,73 L50,73 L51,65.5 C45,65.5 38,62 36.4,55.5 L36,55.5 A1.5,1.5 0,0 1,36 52.5 Z" />
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M41,73.5 L67,73.5 C67,77.5 62,79.5 54,79.5 C46,79.5 41,77.5 41,73.5 Z" />
+</vector>

@@ -66,4 +66,13 @@ class TxtToEpubTest {
         assertEquals("mimetype", names.first())
         assertTrue(names.containsAll(listOf("META-INF/container.xml", "OEBPS/content.opf", "OEBPS/nav.xhtml", "OEBPS/c1.xhtml")))
     }
+
+    @Test fun englishBooksGetEnglishLabels() {
+        val para = "It was a bright cold day in April, and the clocks were striking the hour once again. "
+        val r = TxtToEpub.parse((1..200).joinToString("\n") { para }, "novel.txt")
+        assertEquals("en", r.language)
+        assertTrue(r.chapters.first().title == "Part 1")
+        val chaptered = TxtToEpub.parse("Preface text\nChapter 1\n$para\nChapter 2\n$para", "novel.txt")
+        assertEquals(listOf("Front matter", "Chapter 1", "Chapter 2"), chaptered.chapters.map { it.title })
+    }
 }

@@ -121,20 +121,21 @@ object Converters {
                 book.resources += EpubBuilder.Res(path, type, data)
             }
             info?.child("coverpage")?.child("image")?.hrefAttr()?.removePrefix("#")?.let { images[it] }?.let { book.cover = it }
-            book.cover?.let { book.docs += EpubBuilder.Doc("封面", """<div style="text-align:center"><img src="$it" alt="" style="max-width:100%;max-height:95vh"/></div>""", inToc = false) }
+            val labels = ContentLabels.of(lang)
+            book.cover?.let { book.docs += EpubBuilder.Doc(labels.cover, """<div style="text-align:center"><img src="$it" alt="" style="max-width:100%;max-height:95vh"/></div>""", inToc = false) }
 
             for (body in bodies) {
                 val notes = body.getAttribute("name") == "notes"
                 val sections = body.children("section")
                 if (sections.isEmpty()) {
                     val html = render(body, images, 2)
-                    if (html.isNotBlank()) book.docs += EpubBuilder.Doc(if (notes) "注释" else title, html)
+                    if (html.isNotBlank()) book.docs += EpubBuilder.Doc(if (notes) labels.notes else title, html)
                     continue
                 }
                 // Text before the first section (epigraphs, the book title) goes with it.
                 val intro = body.children().takeWhile { it.localTag() != "section" }.joinToString("") { renderNode(it, images, 2) }
                 sections.forEachIndexed { i, sec ->
-                    val secTitle = sec.child("title")?.let(::plain)?.ifBlank { null } ?: if (notes) "注释" else "第 ${i + 1} 部分"
+                    val secTitle = sec.child("title")?.let(::plain)?.ifBlank { null } ?: if (notes) labels.notes else labels.part(i + 1)
                     val html = (if (i == 0 && !notes) intro else "") + render(sec, images, 2)
                     book.docs += EpubBuilder.Doc(secTitle, html)
                 }
@@ -259,8 +260,9 @@ object Converters {
                 }
                 "sdt" -> block.getElementsByTagName("w:p").let { l -> (0 until l.length).forEach { paras += paragraph(l.item(it) as Element) } }
             }
-            book.docs += chapters(paras, title)
-            return EpubBuilder(title, author, EpubBuilder.guessLanguage(paras.take(200).joinToString("") { it.text })).also { b ->
+            val lang = EpubBuilder.guessLanguage(paras.take(200).joinToString("") { it.text })
+            book.docs += chapters(paras, title, ContentLabels.of(lang))
+            return EpubBuilder(title, author, lang).also { b ->
                 b.docs += book.docs
                 b.resources += book.resources
             }
@@ -278,7 +280,7 @@ object Converters {
             level?.let { id to it }
         }.toMap()
 
-        private fun chapters(input: List<Para>, title: String): List<EpubBuilder.Doc> {
+        private fun chapters(input: List<Para>, title: String, labels: ContentLabels): List<EpubBuilder.Doc> {
             // No heading styles: treat lines like "第三章 …" as chapter titles, as for TXT.
             val paras = if (input.any { it.level > 0 }) input else input.map { p ->
                 if (p.text.length <= 40 && TxtToEpub.CHAPTER.matches(p.text.trim())) Para(1, p.html, p.text) else p
@@ -301,7 +303,7 @@ object Converters {
                     p.html.isNotBlank() -> sb.append("<p>${p.html}</p>")
                 }
                 // Without headings, keep chapters to a readable size.
-                if (top == null && sb.length > 60_000) { flush(); chTitle = "第 ${docs.size + 1} 部分" }
+                if (top == null && sb.length > 60_000) { flush(); chTitle = labels.part(docs.size + 1) }
             }
             flush()
             return docs
@@ -349,7 +351,7 @@ object Converters {
                 val path = "images/p${i + 1}.$ext"
                 book.resources += EpubBuilder.Res(path, EpubBuilder.mediaTypeOf(name)!!, data)
                 val (w, h) = ImageSize.of(data) ?: (1000 to 1500)
-                book.docs += EpubBuilder.Doc("第 ${i + 1} 页", """<img src="$path" alt=""/>""", width = w, height = h, inToc = i == 0)
+                book.docs += EpubBuilder.Doc(ContentLabels.of(book.language).page(i + 1), """<img src="$path" alt=""/>""", width = w, height = h, inToc = i == 0)
                 if (i == 0) book.cover = path
             }
             return book

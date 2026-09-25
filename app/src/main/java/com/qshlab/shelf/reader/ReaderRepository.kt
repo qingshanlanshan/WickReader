@@ -1,5 +1,7 @@
 package com.qshlab.shelf.reader
 
+import android.content.Context
+import com.qshlab.shelf.R
 import com.qshlab.shelf.data.Book
 import com.qshlab.shelf.data.LibraryRepository
 import com.google.mlkit.nl.translate.TranslateLanguage
@@ -78,7 +80,11 @@ fun Book.showsSimplified(globalDefault: Boolean): Boolean = convertToSimplified 
  * Opens publications before the reader starts. ReaderActivity needs the navigator factory
  * synchronously in onCreate, so the (async) opening happens here first.
  */
-class ReaderRepository(private val library: LibraryRepository, private val settings: SettingsRepository) {
+class ReaderRepository(
+    private val context: Context,
+    private val library: LibraryRepository,
+    private val settings: SettingsRepository,
+) {
     private val sessions = mutableMapOf<Long, ReaderSession>()
     private val mutex = Mutex()
 
@@ -86,11 +92,11 @@ class ReaderRepository(private val library: LibraryRepository, private val setti
 
     suspend fun open(bookId: Long): Result<ReaderSession> = mutex.withLock {
         sessions[bookId]?.let { return Result.success(it) }
-        val book = library.get(bookId) ?: return Result.failure(IllegalStateException("书不存在"))
+        val book = library.get(bookId) ?: return Result.failure(IllegalStateException(context.getString(R.string.rd_err_book_missing)))
         val file = File(book.filePath)
-        if (!file.exists()) return Result.failure(IllegalStateException("书籍文件丢失"))
+        if (!file.exists()) return Result.failure(IllegalStateException(context.getString(R.string.rd_err_file_missing)))
         if (book.format == "pdf") {
-            val publication = library.openPublication(file) ?: return Result.failure(IllegalStateException("无法打开这个 PDF"))
+            val publication = library.openPublication(file) ?: return Result.failure(IllegalStateException(context.getString(R.string.rd_err_pdf_open)))
             val locator = book.locator?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() }
             val session = ReaderSession(
                 book, publication, null, locator, simplified = false, translation = TranslationMode.OFF,
@@ -109,7 +115,7 @@ class ReaderRepository(private val library: LibraryRepository, private val setti
         // The layout depends on the opened publication; chapters are only read later.
         var layout = PageLayout.HORIZONTAL_LTR
         val publication = library.openPublication(file, toSimplified = simplified, translator = translator, layout = { layout })
-            ?: return Result.failure(IllegalStateException("无法打开这本书"))
+            ?: return Result.failure(IllegalStateException(context.getString(R.string.rd_err_book_open)))
         layout = book.pageLayoutValue(publication)
         val locator = book.locator?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() }
         val session = ReaderSession(book, publication, EpubNavigatorFactory(publication), locator, simplified, mode, pair, layout)

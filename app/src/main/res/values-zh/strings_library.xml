@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared buttons -->
+    <string name="lib_back">返回</string>
+    <string name="lib_cancel">取消</string>
+    <string name="lib_delete">删除</string>
+    <string name="lib_save">保存</string>
+    <string name="lib_ok">确定</string>
+    <string name="lib_confirm">确认</string>
+
+    <!-- Library screen: top bar -->
+    <string name="lib_title">书架</string>
+    <string name="lib_search">搜索</string>
+    <string name="lib_search_hint">搜索书名、作者、系列</string>
+    <string name="lib_toggle_view">切换显示方式</string>
+    <string name="lib_settings">设置</string>
+    <string name="lib_more">更多</string>
+    <string name="lib_menu_scan">扫描手机中的电子书</string>
+    <string name="lib_menu_import_files">导入文件（可多选）</string>
+    <string name="lib_menu_import_folder">导入文件夹</string>
+    <string name="lib_menu_catalogs">在线书库（OPDS）</string>
+    <string name="lib_menu_select">选择多本书</string>
+    <string name="lib_menu_suggestions">整理系列建议</string>
+    <string name="lib_add_book">添加书</string>
+
+    <!-- Library screen: selection mode -->
+    <string name="lib_exit_selection">退出选择</string>
+    <string name="lib_select_books">点选书籍</string>
+    <string name="lib_selected_count">已选 %1$d 本</string>
+    <string name="lib_select_all">全选</string>
+    <string name="lib_set_series">设为系列</string>
+    <string name="lib_action_want">想读</string>
+    <string name="lib_action_unwant">取消想读</string>
+    <string name="lib_action_finished">已读完</string>
+    <string name="lib_action_unfinished">未读完</string>
+    <string name="lib_action_edit">编辑</string>
+    <string name="lib_delete_n_title">删除 %1$d 本书？</string>
+    <string name="lib_delete_n_text">这些书会从书架和应用存储中删除，阅读进度和笔记也会一起删除。手机上的原文件不受影响。</string>
+
+    <!-- Library screen: filters and shelf -->
+    <string name="lib_filter">筛选</string>
+    <string name="lib_filter_status">阅读状态</string>
+    <string name="lib_filter_language">语言</string>
+    <string name="lib_filter_format">格式</string>
+    <string name="lib_filter_all">全部</string>
+    <string name="lib_filter_clear">清除筛选</string>
+    <string name="lib_book_count">%1$d 本</string>
+    <string name="lib_no_matches">没有符合条件的书</string>
+    <string name="lib_suggestion_banner">发现 %1$d 组可能是同一系列的书，点此确认</string>
+    <string name="lib_empty_title">书架是空的</string>
+    <string name="lib_empty_formats">支持 EPUB、PDF、TXT、FB2、Word、漫画 CBZ</string>
+    <string name="lib_empty_import">选择文件导入</string>
+    <string name="lib_empty_catalogs">从在线书库下载公版书</string>
+
+    <!-- Book cells and rows -->
+    <string name="lib_selected">已选</string>
+    <string name="lib_not_selected">未选</string>
+    <string name="lib_series_count_author">系列 · %1$d 本 · %2$s</string>
+    <string name="lib_series_count">系列 · %1$d 本</string>
+    <string name="lib_author_count">作者 · %1$d 本</string>
+    <string name="lib_series_by">系列 · %1$s</string>
+    <string name="lib_author">作者</string>
+    <string name="lib_stack_name_count">%1$s（%2$d 本）</string>
+    <string name="lib_continue_reading">继续阅读</string>
+    <string name="lib_just_started">刚开始</string>
+    <string name="lib_volume_n">第%1$s卷</string>
+
+    <!-- Book actions sheet -->
+    <string name="lib_read">阅读</string>
+    <string name="lib_edit_info_series">编辑信息与系列</string>
+    <string name="lib_mark_finished">标记为已读完</string>
+    <string name="lib_mark_unfinished">标记为未读完</string>
+    <string name="lib_mark_want">标记为想读</string>
+    <string name="lib_remove_want">取消想读</string>
+    <string name="lib_delete_one_title">删除这本书？</string>
+    <string name="lib_delete_one_text">《%1$s》会从书架和应用存储中删除，阅读进度也会一起删除。</string>
+    <string name="lib_edit_info">编辑信息</string>
+    <string name="lib_field_title">书名</string>
+    <string name="lib_field_series">系列（留空 = 不属于系列）</string>
+    <string name="lib_field_volume">第几卷</string>
+
+    <!-- Group screen and series tools -->
+    <string name="lib_organize">整理</string>
+    <string name="lib_series_name">系列名</string>
+    <string name="lib_series_order_hint">按顺序编号（用箭头调整）</string>
+    <string name="lib_move_up">上移</string>
+    <string name="lib_move_down">下移</string>
+    <string name="lib_remove_from_series">移出系列</string>
+    <string name="lib_suggestions_title">整理系列</string>
+    <string name="lib_suggestions_intro">根据书名猜出的系列。确认前可以改名、去掉不属于的书；也可以在书架上长按选中几本书，手动「设为系列」。</string>
+    <string name="lib_suggestions_empty">暂时没有新的建议</string>
+    <string name="lib_join_series">加入已有系列「%1$s」</string>
+    <string name="lib_ignore">忽略</string>
+
+    <!-- Snackbar messages (LibraryViewModel) -->
+    <string name="lib_msg_importing_files">正在导入 %1$d 个文件…</string>
+    <string name="lib_msg_importing_books">正在导入 %1$d 本书…</string>
+    <string name="lib_msg_scanning_folder">正在扫描文件夹…</string>
+    <string name="lib_msg_cannot_open">无法打开</string>
+    <string name="lib_msg_cannot_open_reason">无法打开：%1$s</string>
+    <string name="lib_msg_cannot_open_file">无法打开这个文件</string>
+    <string name="lib_msg_deleted_book">已删除《%1$s》</string>
+    <string name="lib_msg_deleted_books">已删除 %1$d 本书</string>
+    <string name="lib_msg_nothing_to_import">没有找到可导入的书（支持 EPUB、PDF、TXT、FB2、Word、CBZ）</string>
+    <string name="lib_msg_imported">导入了 %1$d 本</string>
+    <string name="lib_msg_imported_skipped">导入了 %1$d 本，跳过 %2$d 个</string>
+    <string name="lib_msg_imported_skipped_reason">导入了 %1$d 本，跳过 %2$d 个（%3$s）</string>
+    <string name="lib_msg_removed_from_series">已移出系列</string>
+    <string name="lib_msg_added_to_series">已把 %1$d 本书放进「%2$s」</string>
+    <string name="lib_msg_series_created">已整理为系列「%1$s」</string>
+    <string name="lib_unknown_author">未知作者</string>
+</resources>

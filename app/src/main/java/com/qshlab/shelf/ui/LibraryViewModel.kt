@@ -2,8 +2,10 @@ package com.qshlab.shelf.ui
 
 import android.app.Application
 import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.qshlab.shelf.R
 import com.qshlab.shelf.data.Book
 import com.qshlab.shelf.chinese.ChineseConverter
 import com.qshlab.shelf.data.ImportResult
@@ -79,6 +81,8 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
 
     private val converter by lazy { ChineseConverter.get(app) }
 
+    private fun str(@StringRes id: Int, vararg args: Any): String = getApplication<Application>().getString(id, *args)
+
     val state: StateFlow<LibraryState> = combine(
         shelf.library.observeBooks(), shelf.settings.library, shelf.settings.reader, query, shelf.settings.app,
     ) { books, settings, reader, q, app ->
@@ -105,7 +109,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun importFiles(uris: List<Uri>) {
-        viewModelScope.launch { events.send("正在导入 ${uris.size} 个文件…"); report(shelf.library.importUris(uris)) }
+        viewModelScope.launch { events.send(str(R.string.lib_msg_importing_files, uris.size)); report(shelf.library.importUris(uris)) }
     }
 
     /** A file opened with / shared to the app: import it, then open it (or the existing copy). */
@@ -114,11 +118,11 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
             val result = shelf.library.importUris(listOf(uri)).firstOrNull()
             val book = when (result) {
                 is ImportResult.Added -> result.book
-                is ImportResult.Skipped -> if (result.reason == "已在书架中") shelf.library.findByName(result.name) else null
+                is ImportResult.Skipped -> if (result.duplicate) shelf.library.findByName(result.name) else null
                 null -> null
             }
             if (book == null) {
-                events.send((result as? ImportResult.Skipped)?.let { "无法打开：${it.reason}" } ?: "无法打开这个文件")
+                events.send((result as? ImportResult.Skipped)?.let { str(R.string.lib_msg_cannot_open_reason, it.reason) } ?: str(R.string.lib_msg_cannot_open_file))
                 return@launch
             }
             open(book, onReady)
@@ -126,7 +130,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun importFolder(uri: Uri) {
-        viewModelScope.launch { events.send("正在扫描文件夹…"); report(shelf.library.importTree(uri)) }
+        viewModelScope.launch { events.send(str(R.string.lib_msg_scanning_folder)); report(shelf.library.importTree(uri)) }
     }
 
     fun update(book: Book) {
@@ -134,7 +138,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun delete(book: Book) {
-        viewModelScope.launch { shelf.library.delete(book); events.send("已删除《${book.title}》") }
+        viewModelScope.launch { shelf.library.delete(book); events.send(str(R.string.lib_msg_deleted_book, book.title)) }
     }
 
     /** Opens the publication first; [onReady] then starts the reader. */
@@ -142,23 +146,22 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             shelf.readers.open(book.id)
                 .onSuccess { onReady(book.id) }
-                .onFailure { events.send(it.message ?: "无法打开") }
+                .onFailure { events.send(it.message ?: str(R.string.lib_msg_cannot_open)) }
         }
     }
 
     private suspend fun report(results: List<ImportResult>, quietIfEmpty: Boolean = false) {
         if (results.isEmpty()) {
-            if (!quietIfEmpty) events.send("没有找到可导入的书（支持 EPUB、PDF、TXT、FB2、Word、CBZ）")
+            if (!quietIfEmpty) events.send(str(R.string.lib_msg_nothing_to_import))
             return
         }
         val added = results.count { it is ImportResult.Added }
         val skipped = results.filterIsInstance<ImportResult.Skipped>()
-        val msg = buildString {
-            append("导入了 $added 本")
-            if (skipped.isNotEmpty()) {
-                append("，跳过 ${skipped.size} 个")
-                skipped.groupBy { it.reason }.keys.firstOrNull()?.let { append("（$it）") }
-            }
+        val reason = skipped.groupBy { it.reason }.keys.firstOrNull()
+        val msg = when {
+            skipped.isEmpty() -> str(R.string.lib_msg_imported, added)
+            reason == null -> str(R.string.lib_msg_imported_skipped, added, skipped.size)
+            else -> str(R.string.lib_msg_imported_skipped_reason, added, skipped.size, reason)
         }
         events.send(msg)
     }
@@ -185,8 +188,8 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
             GroupBy.AUTHORS -> {
                 // One stack per author, in the order of their best-ranked book.
                 // Keyed on the 简体 form so 沈書雲 and 沈书云 are one author.
-                val byAuthor = sorted.groupBy { seriesKey(it.author ?: UNKNOWN_AUTHOR)!! }
-                byAuthor.values.map { list -> ShelfItem.Stack(list.first().author ?: UNKNOWN_AUTHOR, list, GroupKind.AUTHOR) }
+                val byAuthor = sorted.groupBy { seriesKey(it.author ?: unknownAuthor)!! }
+                byAuthor.values.map { list -> ShelfItem.Stack(list.first().author ?: unknownAuthor, list, GroupKind.AUTHOR) }
                     .let { stacks -> if (settings.sort == SortOrder.TITLE || settings.sort == SortOrder.AUTHOR) stacks.sortedWith { a, b -> collator.compare(a.name, b.name) } else stacks }
             }
         }
@@ -246,7 +249,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
             books.forEachIndexed { i, b ->
                 shelf.library.update(b.copy(series = name?.trim()?.ifBlank { null }, seriesIndex = if (name.isNullOrBlank()) null else numbers.getOrNull(i), seriesManual = true))
             }
-            events.send(if (name.isNullOrBlank()) "已移出系列" else "已把 ${books.size} 本书放进「${name.trim()}」")
+            events.send(if (name.isNullOrBlank()) str(R.string.lib_msg_removed_from_series) else str(R.string.lib_msg_added_to_series, books.size, name.trim()))
         }
     }
 
@@ -262,7 +265,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
             booksById(chosen.map { it.id }).forEach { b ->
                 shelf.library.update(b.copy(series = name.trim(), seriesIndex = numbers[b.id], seriesManual = true))
             }
-            events.send("已整理为系列「${name.trim()}」")
+            events.send(str(R.string.lib_msg_series_created, name.trim()))
         }
     }
 
@@ -287,18 +290,17 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val books = booksById(ids)
             books.forEach { shelf.library.delete(it) }
-            events.send("已删除 ${books.size} 本书")
+            events.send(str(R.string.lib_msg_deleted_books, books.size))
         }
     }
 
     fun importScanned(files: List<java.io.File>) {
         viewModelScope.launch {
-            events.send("正在导入 ${files.size} 本书…")
+            events.send(str(R.string.lib_msg_importing_books, files.size))
             report(shelf.library.importFiles(files))
         }
     }
 
-    companion object {
-        const val UNKNOWN_AUTHOR = "未知作者"
-    }
+    /** Name (and grouping key) for books without an author, in the app's language. */
+    val unknownAuthor: String get() = getApplication<Application>().getString(R.string.lib_unknown_author)
 }

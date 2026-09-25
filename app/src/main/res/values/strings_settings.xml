@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings screen -->
+    <string name="set_back">Back</string>
+    <string name="set_title">Settings</string>
+    <string name="set_section_general">General</string>
+    <string name="set_lang_native_zh">中文</string>
+    <string name="set_lang_native_en">English</string>
+    <string name="set_section_ai_voice">Read aloud · AI voices</string>
+    <string name="set_ai_voice_intro">AI voices are generated offline on your phone and sound far more natural than the system voice. Download once and use them without internet.</string>
+    <string name="set_voice_zh">Chinese reading voice</string>
+    <string name="set_voice_en">English reading voice</string>
+    <string name="set_prefer_ai">Prefer AI voices</string>
+    <string name="set_prefer_ai_desc">When off, the phone\'s built-in speech engine is used by default</string>
+    <string name="set_section_import">Import</string>
+    <string name="set_scan_formats">Formats to look for when scanning the phone</string>
+    <string name="set_scan_mobi_note">MOBI / AZW3 files are only listed for now (they can\'t be opened yet).</string>
+    <string name="set_scan_txt_min">Ignore TXT files smaller than this (skips logs and readme files)</string>
+    <string name="set_no_limit">No limit</string>
+    <string name="set_section_reading">Reading</string>
+    <string name="set_volume_keys">Turn pages with volume keys</string>
+    <string name="set_volume_keys_desc">While reading aloud, the volume keys still change the volume</string>
+    <string name="set_to_simplified">Show Traditional Chinese books in Simplified</string>
+    <string name="set_to_simplified_desc">You can also switch this per book in the reading settings</string>
+    <string name="set_publisher_styles">Use the book\'s own layout</string>
+    <string name="set_publisher_styles_desc">When off, every book uses your font, text size and line spacing</string>
+    <string name="set_section_storage">Storage</string>
+    <string name="set_storage_books">Books</string>
+    <string name="set_storage_voices">AI voices</string>
+    <string name="set_storage_translations">Translation cache</string>
+    <string name="set_translations_cleared">Translation cache cleared</string>
+    <string name="set_clear_translations">Clear translation cache</string>
+    <string name="set_section_about">About</string>
+    <string name="set_about">Qingdeng %1$s · All your data stays on this phone.\n\nOpen-source projects used: Readium Kotlin Toolkit (BSD-3), OpenCC dictionaries (Apache-2.0), sherpa-onnx (Apache-2.0), Kokoro-82M v1.1-zh (Apache-2.0), Matcha-TTS, Piper voice models, Apache Commons Compress, Google ML Kit Translation.</string>
+    <string name="set_preview">Preview</string>
+    <string name="set_done">Done</string>
+    <string name="set_delete_voice_title">Delete “%1$s”?</string>
+    <string name="set_delete_voice_message">You can download it again later if needed (about %1$d MB).</string>
+    <string name="set_delete">Delete</string>
+    <string name="set_cancel">Cancel</string>
+    <string name="set_downloading">Downloading %1$d%% (%2$d MB)</string>
+    <string name="set_unpacking">Unpacking…</string>
+    <string name="set_downloaded">Downloaded</string>
+    <string name="set_download_size">Download (%1$d MB)</string>
+
+    <!-- Scan screen -->
+    <string name="set_scan_title">Scan phone for e-books</string>
+    <string name="set_rescan">Scan again</string>
+    <string name="set_select_none">Select none</string>
+    <string name="set_select_all">Select all</string>
+    <string name="set_import_count">Import (%1$d)</string>
+    <string name="set_scan_need_access">“All files access” is needed</string>
+    <string name="set_scan_access_desc">To find e-books on your phone, the app needs permission to read storage. Books are only copied into this app and are never uploaded anywhere.</string>
+    <string name="set_grant_access">Grant access</string>
+    <string name="set_scanning">Scanning…</string>
+    <string name="set_scan_none">No e-books found</string>
+    <string name="set_scan_summary">Found %1$d files, %2$d already on the shelf</string>
+    <string name="set_scan_summary_ignored">Found %1$d files, %2$d already on the shelf (TXT / web pages under %3$d KB ignored)</string>
+    <string name="set_scan_in_library">On the shelf</string>
+    <string name="set_scan_unsupported">Not supported yet; convert it to EPUB with Calibre</string>
+
+    <!-- Scan formats -->
+    <string name="set_format_epub">EPUB</string>
+    <string name="set_format_pdf">PDF</string>
+    <string name="set_format_txt">TXT</string>
+    <string name="set_format_fb2">FB2</string>
+    <string name="set_format_docx">Word</string>
+    <string name="set_format_cbz">Comics CBZ</string>
+    <string name="set_format_html">Web page HTML</string>
+    <string name="set_format_mobi">MOBI / AZW3</string>
+
+    <!-- AI voice catalog -->
+    <string name="tts_kokoro_title">Kokoro Chinese &amp; English (recommended)</string>
+    <string name="tts_kokoro_short">Kokoro Chinese &amp; English</string>
+    <string name="tts_kokoro_desc">The most natural voices: 55 female + 45 male, and it can read English too. Large model; needs a fairly recent phone.</string>
+    <string name="tts_kokoro_license">Apache-2.0 (hexgrad/Kokoro-82M-v1.1-zh)</string>
+    <string name="tts_baker_title">Biaobei female · Chinese (fast)</string>
+    <string name="tts_baker_short">Biaobei female · Chinese</string>
+    <string name="tts_baker_desc">Trained on a professional announcer\'s recordings: clear diction and very fast synthesis, smooth even on old phones. One female voice.</string>
+    <string name="tts_baker_license">Matcha-TTS / icefall (Apache-2.0); training data (Biaobei BZNSYP) is for non-commercial use only</string>
+    <string name="tts_amy_title">Amy · English (light)</string>
+    <string name="tts_amy_short">Amy · English</string>
+    <string name="tts_amy_desc">A small, fast American English female voice.</string>
+    <string name="tts_amy_license">Piper model (MIT / public datasets)</string>
+    <string name="tts_speaker_female_n">Female %1$s</string>
+    <string name="tts_speaker_male_n">Male %1$s</string>
+    <string name="tts_speaker_us_female">US female %1$s</string>
+    <string name="tts_speaker_uk_female">UK female %1$s</string>
+    <string name="tts_speaker_baker">Biaobei female</string>
+    <string name="tts_speaker_amy">Amy</string>
+
+    <!-- AI voice download / engine messages -->
+    <string name="tts_save_failed">Couldn\'t save the voice files</string>
+    <string name="tts_download_failed">Download failed</string>
+    <string name="tts_download_failed_http">Download failed (HTTP %1$d)</string>
+    <string name="tts_download_interrupted">Download interrupted. Please try again.</string>
+    <string name="tts_mirror_missing_model">The mirror is missing the model file</string>
+    <string name="tts_file_incomplete">Incomplete file: %1$s</string>
+    <string name="tts_preview_failed">Preview failed</string>
+    <string name="tts_no_voice">No AI voice can read %1$s</string>
+    <string name="tts_this_language">this language</string>
+    <string name="tts_synthesis_failed">AI voice synthesis failed: %1$s</string>
+    <string name="tts_unknown_error">unknown error</string>
+    <string name="tts_load_failed">Couldn\'t load the AI voice</string>
+</resources>

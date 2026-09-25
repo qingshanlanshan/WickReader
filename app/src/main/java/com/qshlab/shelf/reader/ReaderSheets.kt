@@ -42,6 +42,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -49,6 +51,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import com.qshlab.shelf.R
 import com.qshlab.shelf.data.Annotation
 import com.qshlab.shelf.data.AnnotationType
 import kotlin.math.roundToInt
@@ -79,7 +82,11 @@ fun NavigationSheet(
     val highlights = annotations.filter { it.type == AnnotationType.HIGHLIGHT }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         PrimaryTabRow(selectedTabIndex = tab) {
-            listOf("目录", "书签 ${bookmarks.size}", "笔记 ${highlights.size}").forEachIndexed { i, label ->
+            listOf(
+                stringResource(R.string.rd_contents),
+                stringResource(R.string.rd_tab_bookmarks, bookmarks.size),
+                stringResource(R.string.rd_tab_notes, highlights.size),
+            ).forEachIndexed { i, label ->
                 Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) })
             }
         }
@@ -87,7 +94,7 @@ fun NavigationSheet(
             0 -> {
                 val currentIndex = toc.indexOfFirst { it.link.href.toString().substringBefore('#') == currentHref }
                 val state = rememberLazyListState(initialFirstVisibleItemIndex = maxOf(0, currentIndex - 3))
-                if (toc.isEmpty()) Text("这本书没有目录", Modifier.padding(20.dp))
+                if (toc.isEmpty()) Text(stringResource(R.string.rd_no_toc), Modifier.padding(20.dp))
                 LazyColumn(state = state, modifier = Modifier.fillMaxWidth()) {
                     itemsIndexed(toc) { i, entry ->
                         val isCurrent = i == currentIndex
@@ -109,7 +116,7 @@ fun NavigationSheet(
                 val list = if (tab == 1) bookmarks else highlights
                 if (list.isEmpty()) {
                     Text(
-                        if (tab == 1) "还没有书签。阅读时点顶部的书签按钮添加。" else "还没有笔记。选中文字后点「高亮」或「笔记」。",
+                        stringResource(if (tab == 1) R.string.rd_no_bookmarks else R.string.rd_no_notes),
                         Modifier.padding(20.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -137,7 +144,7 @@ private fun AnnotationRow(a: Annotation, onClick: () -> Unit, onDelete: () -> Un
                 Text("📝 $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, maxLines = 3, overflow = TextOverflow.Ellipsis)
             }
         }
-        IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, "删除", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+        IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, stringResource(R.string.rd_delete), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
 }
 
@@ -168,14 +175,24 @@ fun SearchSheet(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                placeholder = { Text("在书中搜索") },
+                placeholder = { Text(stringResource(R.string.rd_search_hint)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { run() }),
-                trailingIcon = { if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else TextButton(onClick = { run() }) { Text("搜索") } },
+                trailingIcon = { if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else TextButton(onClick = { run() }) { Text(stringResource(R.string.rd_search)) } },
                 modifier = Modifier.fillMaxWidth(),
             )
-            results?.let { Text(if (it.isEmpty()) "没有找到" else "找到 ${it.size} 处${if (it.size >= 300) "（只显示前 300 处）" else ""}", Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.labelMedium) }
+            results?.let {
+                Text(
+                    when {
+                        it.isEmpty() -> stringResource(R.string.rd_search_none)
+                        it.size >= 300 -> stringResource(R.string.rd_search_found_limited, it.size)
+                        else -> pluralStringResource(R.plurals.rd_search_found, it.size, it.size)
+                    },
+                    Modifier.padding(vertical = 8.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
         }
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp).padding(bottom = 16.dp)) {
             items(results.orEmpty()) { hit ->
@@ -215,11 +232,11 @@ fun HighlightSheet(a: Annotation, onSave: (Annotation) -> Unit, onDelete: () -> 
                     )
                 }
             }
-            OutlinedTextField(note, { note = it }, label = { Text("笔记") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+            OutlinedTextField(note, { note = it }, label = { Text(stringResource(R.string.rd_note)) }, modifier = Modifier.fillMaxWidth(), minLines = 2)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onDelete) { Text("删除高亮") }
+                TextButton(onClick = onDelete) { Text(stringResource(R.string.rd_delete_highlight)) }
                 Box(Modifier.weight(1f))
-                Button(onClick = { onSave(a.copy(note = note.ifBlank { null }, color = color)) }) { Text("保存") }
+                Button(onClick = { onSave(a.copy(note = note.ifBlank { null }, color = color)) }) { Text(stringResource(R.string.rd_save)) }
             }
         }
     }

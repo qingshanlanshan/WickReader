@@ -19,7 +19,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import com.qshlab.shelf.R
 import com.qshlab.shelf.data.Book
 
 enum class GroupKind { SERIES, AUTHOR }
@@ -33,22 +35,23 @@ fun GroupScreen(vm: LibraryViewModel, kind: GroupKind, name: String, onBack: () 
     var organizing by remember { mutableStateOf(false) }
     val books = when (kind) {
         GroupKind.SERIES -> vm.seriesKey(name).let { key -> seriesOrder(state.allBooks.filter { vm.seriesKey(it.series) == key }) }
-        GroupKind.AUTHOR -> vm.seriesKey(name).let { key -> state.allBooks.filter { vm.seriesKey(it.author ?: LibraryViewModel.UNKNOWN_AUTHOR) == key }.sortedBy { it.title } }
+        GroupKind.AUTHOR -> vm.seriesKey(name).let { key -> state.allBooks.filter { vm.seriesKey(it.author ?: vm.unknownAuthor) == key }.sortedBy { it.title } }
     }
+    val volumeFormat = stringResource(R.string.lib_volume_n)
     Scaffold(
         topBar = {
             TopAppBar(
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.lib_back)) } },
                 actions = {
                     if (kind == GroupKind.SERIES && books.isNotEmpty()) {
-                        TextButton(onClick = { organizing = true }) { Text("整理") }
+                        TextButton(onClick = { organizing = true }) { Text(stringResource(R.string.lib_organize)) }
                     }
                 },
                 title = {
                     Column {
                         Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
-                            (if (kind == GroupKind.SERIES) "系列" else "作者") + " · ${books.size} 本",
+                            if (kind == GroupKind.SERIES) stringResource(R.string.lib_series_count, books.size) else stringResource(R.string.lib_author_count, books.size),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -61,7 +64,7 @@ fun GroupScreen(vm: LibraryViewModel, kind: GroupKind, name: String, onBack: () 
             ShelfItems(
                 books.map { ShelfItem.Single(it) }, state.settings.viewMode, onOpenBook, {},
                 onLongPress = { actionsFor = it },
-                badge = { b -> if (kind == GroupKind.SERIES) b.seriesIndex?.let { "第${formatIndex(it)}卷" } else null },
+                badge = { b -> if (kind == GroupKind.SERIES) b.seriesIndex?.let { volumeFormat.format(formatIndex(it)) } else null },
             )
         }
     }

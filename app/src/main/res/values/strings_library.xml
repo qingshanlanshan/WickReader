@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared buttons -->
+    <string name="lib_back">Back</string>
+    <string name="lib_cancel">Cancel</string>
+    <string name="lib_delete">Delete</string>
+    <string name="lib_save">Save</string>
+    <string name="lib_ok">OK</string>
+    <string name="lib_confirm">Confirm</string>
+
+    <!-- Library screen: top bar -->
+    <string name="lib_title">Library</string>
+    <string name="lib_search">Search</string>
+    <string name="lib_search_hint">Search title, author, series</string>
+    <string name="lib_toggle_view">Change view</string>
+    <string name="lib_settings">Settings</string>
+    <string name="lib_more">More</string>
+    <string name="lib_menu_scan">Scan phone for e-books</string>
+    <string name="lib_menu_import_files">Import files</string>
+    <string name="lib_menu_import_folder">Import folder</string>
+    <string name="lib_menu_catalogs">Online catalogs (OPDS)</string>
+    <string name="lib_menu_select">Select multiple books</string>
+    <string name="lib_menu_suggestions">Series suggestions</string>
+    <string name="lib_add_book">Add books</string>
+
+    <!-- Library screen: selection mode -->
+    <string name="lib_exit_selection">Exit selection</string>
+    <string name="lib_select_books">Select books</string>
+    <string name="lib_selected_count">%1$d selected</string>
+    <string name="lib_select_all">Select all</string>
+    <string name="lib_set_series">Set series</string>
+    <string name="lib_action_want">To read</string>
+    <string name="lib_action_unwant">Not to read</string>
+    <string name="lib_action_finished">Finished</string>
+    <string name="lib_action_unfinished">Not finished</string>
+    <string name="lib_action_edit">Edit</string>
+    <string name="lib_delete_n_title">Delete %1$d books?</string>
+    <string name="lib_delete_n_text">These books will be removed from your library and app storage, along with their reading progress and notes. The original files on your phone are not affected.</string>
+
+    <!-- Library screen: filters and shelf -->
+    <string name="lib_filter">Filter</string>
+    <string name="lib_filter_status">Reading status</string>
+    <string name="lib_filter_language">Language</string>
+    <string name="lib_filter_format">Format</string>
+    <string name="lib_filter_all">All</string>
+    <string name="lib_filter_clear">Clear filters</string>
+    <string name="lib_book_count">%1$d books</string>
+    <string name="lib_no_matches">No books match</string>
+    <string name="lib_suggestion_banner">Found %1$d possible series. Tap to review.</string>
+    <string name="lib_empty_title">Your library is empty</string>
+    <string name="lib_empty_formats">Supports EPUB, PDF, TXT, FB2, Word and CBZ comics</string>
+    <string name="lib_empty_import">Choose files to import</string>
+    <string name="lib_empty_catalogs">Download public-domain books from online catalogs</string>
+
+    <!-- Book cells and rows -->
+    <string name="lib_selected">Selected</string>
+    <string name="lib_not_selected">Not selected</string>
+    <string name="lib_series_count_author">Series · %1$d books · %2$s</string>
+    <string name="lib_series_count">Series · %1$d books</string>
+    <string name="lib_author_count">Author · %1$d books</string>
+    <string name="lib_series_by">Series · %1$s</string>
+    <string name="lib_author">Author</string>
+    <string name="lib_stack_name_count">%1$s (%2$d)</string>
+    <string name="lib_continue_reading">Continue reading</string>
+    <string name="lib_just_started">Just started</string>
+    <string name="lib_volume_n">Vol. %1$s</string>
+
+    <!-- Book actions sheet -->
+    <string name="lib_read">Read</string>
+    <string name="lib_edit_info_series">Edit details and series</string>
+    <string name="lib_mark_finished">Mark as finished</string>
+    <string name="lib_mark_unfinished">Mark as not finished</string>
+    <string name="lib_mark_want">Add to Want to read</string>
+    <string name="lib_remove_want">Remove from Want to read</string>
+    <string name="lib_delete_one_title">Delete this book?</string>
+    <string name="lib_delete_one_text">“%1$s” will be removed from your library and app storage, along with its reading progress.</string>
+    <string name="lib_edit_info">Edit details</string>
+    <string name="lib_field_title">Title</string>
+    <string name="lib_field_series">Series (leave blank for none)</string>
+    <string name="lib_field_volume">Volume number</string>
+
+    <!-- Group screen and series tools -->
+    <string name="lib_organize">Organize</string>
+    <string name="lib_series_name">Series name</string>
+    <string name="lib_series_order_hint">Numbered in this order (use the arrows to reorder)</string>
+    <string name="lib_move_up">Move up</string>
+    <string name="lib_move_down">Move down</string>
+    <string name="lib_remove_from_series">Remove from series</string>
+    <string name="lib_suggestions_title">Organize series</string>
+    <string name="lib_suggestions_intro">Series guessed from book titles. Before confirming, you can rename a series or uncheck books that don\'t belong. You can also long-press books on the shelf to select several, then tap “Set series”.</string>
+    <string name="lib_suggestions_empty">No new suggestions</string>
+    <string name="lib_join_series">Add to existing series “%1$s”</string>
+    <string name="lib_ignore">Dismiss</string>
+
+    <!-- Snackbar messages (LibraryViewModel) -->
+    <string name="lib_msg_importing_files">Importing %1$d files…</string>
+    <string name="lib_msg_importing_books">Importing %1$d books…</string>
+    <string name="lib_msg_scanning_folder">Scanning folder…</string>
+    <string name="lib_msg_cannot_open">Can\'t open</string>
+    <string name="lib_msg_cannot_open_reason">Can\'t open: %1$s</string>
+    <string name="lib_msg_cannot_open_file">Can\'t open this file</string>
+    <string name="lib_msg_deleted_book">Deleted “%1$s”</string>
+    <string name="lib_msg_deleted_books">Deleted %1$d books</string>
+    <string name="lib_msg_nothing_to_import">No books found to import (supports EPUB, PDF, TXT, FB2, Word, CBZ)</string>
+    <string name="lib_msg_imported">Imported %1$d books</string>
+    <string name="lib_msg_imported_skipped">Imported %1$d books, skipped %2$d</string>
+    <string name="lib_msg_imported_skipped_reason">Imported %1$d books, skipped %2$d (%3$s)</string>
+    <string name="lib_msg_removed_from_series">Removed from series</string>
+    <string name="lib_msg_added_to_series">Added %1$d books to “%2$s”</string>
+    <string name="lib_msg_series_created">Grouped into series “%1$s”</string>
+    <string name="lib_unknown_author">Unknown author</string>
+</resources>

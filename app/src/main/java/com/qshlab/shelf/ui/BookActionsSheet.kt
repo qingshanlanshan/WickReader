@@ -36,9 +36,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.qshlab.shelf.R
 import com.qshlab.shelf.data.Book
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,19 +64,19 @@ fun BookActionsSheet(
                 Text(listOfNotNull(book.author, book.format.uppercase(), "%.1f MB".format(book.fileSize / 1e6)).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        ListItem(headlineContent = { Text("阅读") }, leadingContent = { Icon(Icons.AutoMirrored.Filled.MenuBook, null) }, modifier = Modifier.clickable(onClick = onOpen))
-        ListItem(headlineContent = { Text("编辑信息与系列") }, leadingContent = { Icon(Icons.Filled.Edit, null) }, modifier = Modifier.clickable { editing = true })
+        ListItem(headlineContent = { Text(stringResource(R.string.lib_read)) }, leadingContent = { Icon(Icons.AutoMirrored.Filled.MenuBook, null) }, modifier = Modifier.clickable(onClick = onOpen))
+        ListItem(headlineContent = { Text(stringResource(R.string.lib_edit_info_series)) }, leadingContent = { Icon(Icons.Filled.Edit, null) }, modifier = Modifier.clickable { editing = true })
         ListItem(
-            headlineContent = { Text(if (book.finished) "标记为未读完" else "标记为已读完") },
+            headlineContent = { Text(if (book.finished) stringResource(R.string.lib_mark_unfinished) else stringResource(R.string.lib_mark_finished)) },
             leadingContent = { Icon(if (book.finished) Icons.Filled.RadioButtonUnchecked else Icons.Filled.CheckCircle, null) },
             modifier = Modifier.clickable { onSave(book.copy(finished = !book.finished)) },
         )
         ListItem(
-            headlineContent = { Text(if (book.wantToRead) "取消想读" else "标记为想读") },
+            headlineContent = { Text(if (book.wantToRead) stringResource(R.string.lib_remove_want) else stringResource(R.string.lib_mark_want)) },
             leadingContent = { Icon(if (book.wantToRead) Icons.Filled.BookmarkRemove else Icons.Filled.BookmarkAdd, null) },
             modifier = Modifier.clickable { onSave(book.copy(wantToRead = !book.wantToRead)) },
         )
-        ListItem(headlineContent = { Text("删除") }, leadingContent = { Icon(Icons.Filled.Delete, null) }, modifier = Modifier.clickable { confirmDelete = true })
+        ListItem(headlineContent = { Text(stringResource(R.string.lib_delete)) }, leadingContent = { Icon(Icons.Filled.Delete, null) }, modifier = Modifier.clickable { confirmDelete = true })
         Column(Modifier.padding(bottom = 24.dp)) {}
     }
 
@@ -83,10 +85,10 @@ fun BookActionsSheet(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("删除这本书？") },
-            text = { Text("《${book.title}》会从书架和应用存储中删除，阅读进度也会一起删除。") },
-            confirmButton = { TextButton(onClick = onDelete) { Text("删除") } },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("取消") } },
+            title = { Text(stringResource(R.string.lib_delete_one_title)) },
+            text = { Text(stringResource(R.string.lib_delete_one_text, book.title)) },
+            confirmButton = { TextButton(onClick = onDelete) { Text(stringResource(R.string.lib_delete)) } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.lib_cancel)) } },
         )
     }
 }
@@ -100,12 +102,12 @@ private fun EditBookDialog(book: Book, existingSeries: List<String>, onDismiss: 
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("编辑信息") },
+        title = { Text(stringResource(R.string.lib_edit_info)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(title, { title = it }, label = { Text("书名") }, singleLine = true)
-                OutlinedTextField(author, { author = it }, label = { Text("作者") }, singleLine = true)
-                OutlinedTextField(series, { series = it }, label = { Text("系列（留空 = 不属于系列）") }, singleLine = true)
+                OutlinedTextField(title, { title = it }, label = { Text(stringResource(R.string.lib_field_title)) }, singleLine = true)
+                OutlinedTextField(author, { author = it }, label = { Text(stringResource(R.string.lib_author)) }, singleLine = true)
+                OutlinedTextField(series, { series = it }, label = { Text(stringResource(R.string.lib_field_series)) }, singleLine = true)
                 val suggestions = existingSeries.filter { it != series && (series.isBlank() || it.contains(series, ignoreCase = true)) }.take(8)
                 if (suggestions.isNotEmpty()) {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -113,7 +115,7 @@ private fun EditBookDialog(book: Book, existingSeries: List<String>, onDismiss: 
                     }
                 }
                 OutlinedTextField(
-                    index, { index = it }, label = { Text("第几卷") }, singleLine = true,
+                    index, { index = it }, label = { Text(stringResource(R.string.lib_field_volume)) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -130,8 +132,8 @@ private fun EditBookDialog(book: Book, existingSeries: List<String>, onDismiss: 
                         seriesManual = true,
                     )
                 )
-            }) { Text("保存") }
+            }) { Text(stringResource(R.string.lib_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.lib_cancel)) } },
     )
 }

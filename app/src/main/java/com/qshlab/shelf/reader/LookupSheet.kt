@@ -34,7 +34,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.qshlab.shelf.R
 import com.qshlab.shelf.translate.Translation
 
 /** Installed apps that accept selected text (dictionaries, translators): Android's PROCESS_TEXT. */
@@ -56,13 +58,21 @@ fun LookupSheet(text: String, bookSource: String, target: String, onTargetChange
     val from = remember(text) { Translation.sourceOf(text, bookSource) }
     val to = target.takeIf { it != from } ?: Translation.defaultTarget(from)
     var result by remember(text, to) { mutableStateOf<String?>(null) }
-    var status by remember(text, to) { mutableStateOf("翻译中…") }
+    val translating = stringResource(R.string.tr_translating)
+    var status by remember(text, to) { mutableStateOf(translating) }
+    var failed by remember(text, to) { mutableStateOf(false) }
     val apps = remember { textApps(context) }
 
     LaunchedEffect(text, to) {
-        if (!Translation.isDownloaded(from) || !Translation.isDownloaded(to)) status = "首次使用：正在下载${Translation.nameOf(from)}→${Translation.nameOf(to)}翻译模型（约 30 MB，只需一次）…"
+        if (!Translation.isDownloaded(from) || !Translation.isDownloaded(to)) {
+            status = context.getString(R.string.tr_first_download, Translation.nameOf(context, from), Translation.nameOf(context, to))
+        }
         result = runCatching { Translation.translate(text, from, to) }
-            .getOrElse { status = "翻译失败：${it.message ?: "请检查网络后重试（首次需下载模型）"}"; null }
+            .getOrElse {
+                status = context.getString(R.string.tr_failed, it.message ?: context.getString(R.string.tr_failed_hint))
+                failed = true
+                null
+            }
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -79,7 +89,7 @@ fun LookupSheet(text: String, bookSource: String, target: String, onTargetChange
             }
             HorizontalDivider()
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("${Translation.nameOf(from)} 译成", Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.tr_translate_from, Translation.nameOf(from)), Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Translation.TARGETS.filter { it != from }.forEach { lang ->
                     FilterChip(selected = lang == to, onClick = { if (lang != to) onTargetChange(lang) }, label = { Text(Translation.nameOf(lang)) })
                 }
@@ -90,7 +100,7 @@ fun LookupSheet(text: String, bookSource: String, target: String, onTargetChange
                 }
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (!status.startsWith("翻译失败")) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    if (!failed) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                     Text(status, style = MaterialTheme.typography.bodyMedium)
                 }
             }
@@ -99,7 +109,7 @@ fun LookupSheet(text: String, bookSource: String, target: String, onTargetChange
                 AssistChip(onClick = {
                     (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("text", text))
                     onDismiss()
-                }, label = { Text("复制") })
+                }, label = { Text(stringResource(R.string.rd_copy)) })
                 apps.forEach { app ->
                     AssistChip(onClick = {
                         runCatching {
@@ -115,10 +125,10 @@ fun LookupSheet(text: String, bookSource: String, target: String, onTargetChange
                 AssistChip(onClick = {
                     val url = "https://www.bing.com/dict/search?q=" + Uri.encode(text)
                     runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-                }, label = { Text("必应词典") })
+                }, label = { Text(stringResource(R.string.tr_bing_dict)) })
             }
             if (apps.isEmpty()) {
-                Text("提示：安装词典或翻译 App（如欧路词典、Google 翻译）后，会出现在这里。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.tr_apps_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

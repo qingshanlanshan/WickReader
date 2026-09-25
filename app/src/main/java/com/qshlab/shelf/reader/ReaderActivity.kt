@@ -52,6 +52,8 @@ import com.qshlab.shelf.tts.AiTtsEngineProvider
 import com.qshlab.shelf.tts.AiTtsPreferences
 import com.qshlab.shelf.tts.AiVoiceId
 import com.qshlab.shelf.tts.VoiceCatalog
+import com.qshlab.shelf.tts.displayName
+import com.qshlab.shelf.tts.shortTitle
 import com.qshlab.shelf.tts.baseLanguage
 import org.readium.navigator.media.tts.TtsNavigator
 import org.readium.navigator.media.tts.TtsNavigatorFactory
@@ -122,10 +124,10 @@ class ReaderActivity : FragmentActivity() {
     /** Adds 查词/翻译 to the text selection menu (copy/share stay). */
     private val selectionCallback = object : ActionMode.Callback {
         override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
-            menu.add(Menu.NONE, MENU_LOOKUP, 0, "查词/翻译").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-            menu.add(Menu.NONE, MENU_HIGHLIGHT, 1, "高亮").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-            menu.add(Menu.NONE, MENU_NOTE, 2, "笔记").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-            menu.add(Menu.NONE, MENU_COPY, 3, "复制").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            menu.add(Menu.NONE, MENU_LOOKUP, 0, getString(R.string.rd_look_up)).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            menu.add(Menu.NONE, MENU_HIGHLIGHT, 1, getString(R.string.rd_highlight)).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            menu.add(Menu.NONE, MENU_NOTE, 2, getString(R.string.rd_note)).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            menu.add(Menu.NONE, MENU_COPY, 3, getString(R.string.rd_copy)).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
             return true
         }
 
@@ -155,7 +157,7 @@ class ReaderActivity : FragmentActivity() {
                     lookupText = text
                 } else {
                     (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("text", text))
-                    Toast.makeText(this@ReaderActivity, "已复制", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ReaderActivity, getString(R.string.rd_copied), Toast.LENGTH_SHORT).show()
                 }
             }
             mode.finish()
@@ -384,7 +386,7 @@ class ReaderActivity : FragmentActivity() {
         lifecycleScope.launch {
             if (existing.isNotEmpty()) {
                 existing.forEach { shelfApp.annotations.delete(it.id) }
-                Toast.makeText(this@ReaderActivity, "已删除书签", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@ReaderActivity, getString(R.string.rd_bookmark_removed), Toast.LENGTH_SHORT).show()
                 return@launch
             }
             val here = navigator.currentLocator.value
@@ -394,13 +396,13 @@ class ReaderActivity : FragmentActivity() {
                     bookId = bookId,
                     type = AnnotationType.BOOKMARK,
                     locator = here.toJSON().toString(),
-                    text = snippet ?: here.title ?: "书签",
+                    text = snippet ?: here.title ?: getString(R.string.rd_bookmark),
                     chapter = here.title,
                     progress = (here.locations.totalProgression ?: 0.0).toFloat(),
                     createdAt = System.currentTimeMillis(),
                 )
             )
-            Toast.makeText(this@ReaderActivity, "已添加书签", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this@ReaderActivity, getString(R.string.rd_bookmark_added), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -463,7 +465,7 @@ class ReaderActivity : FragmentActivity() {
             }
             var handle: ReadAloud? = null
             if (wantsAiVoice()) {
-                Toast.makeText(this@ReaderActivity, "正在加载 AI 语音…", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@ReaderActivity, getString(R.string.rd_tts_loading_ai), Toast.LENGTH_SHORT).show()
                 val provider = AiTtsEngineProvider(shelfApp.voices, ChineseConverter.get(this@ReaderActivity))
                 val nav = TtsNavigatorFactory(application, session.publication, provider)
                     ?.createNavigator(listener, start, settings.toAiPreferences())?.getOrNull()
@@ -471,17 +473,17 @@ class ReaderActivity : FragmentActivity() {
                     aiEngine = provider.engine
                     handle = ReadAloud(nav, ai = true) { s -> nav.submitPreferences(s.toAiPreferences()) }
                 } else {
-                    Toast.makeText(this@ReaderActivity, "AI 语音加载失败，改用手机自带语音", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@ReaderActivity, getString(R.string.rd_tts_ai_failed), Toast.LENGTH_LONG).show()
                 }
             }
             if (handle == null) {
                 val factory = TtsNavigatorFactory(application, session.publication)
                 if (factory == null) {
-                    Toast.makeText(this@ReaderActivity, "这本书不支持朗读", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ReaderActivity, getString(R.string.rd_tts_unsupported), Toast.LENGTH_SHORT).show()
                     return@launch
                 }
                 val nav = factory.createNavigator(listener, start, settings.toTtsPreferences()).getOrElse {
-                    Toast.makeText(this@ReaderActivity, "无法启动朗读：${it.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@ReaderActivity, getString(R.string.rd_tts_start_failed, it.message.toString()), Toast.LENGTH_LONG).show()
                     return@launch
                 }
                 handle = ReadAloud(nav, ai = false) { s -> nav.submitPreferences(s.toTtsPreferences()) }
@@ -503,7 +505,7 @@ class ReaderActivity : FragmentActivity() {
                             engine.onUtterance(loc.utteranceLocator)
                             if (!slowVoiceWarned && ++utterancesRead > 6 && engine.speedRatio > 1.05) {
                                 slowVoiceWarned = true
-                                Toast.makeText(this@ReaderActivity, "这台手机合成这个声音较慢，句子间可能会停顿。可以在「音色」里换成「标贝女声」。", Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@ReaderActivity, getString(R.string.rd_tts_slow), Toast.LENGTH_LONG).show()
                             }
                         }
                         // Highlight the sentence being read and keep it on screen.
@@ -539,11 +541,11 @@ class ReaderActivity : FragmentActivity() {
             m.speakersFor(lang).forEach { sp ->
                 val id = AiVoiceId(m.id, sp.sid).toString()
                 val selected = handle.ai && (id == chosen || (chosen == null && sp.sid == defaultSid && m == shelfApp.voices.modelsFor(lang).first()))
-                options += VoiceOption(id, "AI · ${m.title.substringBefore('（')} · ${sp.name}", selected)
+                options += VoiceOption(id, getString(R.string.rd_voice_ai, m.shortTitle(this@ReaderActivity), sp.displayName(this@ReaderActivity)), selected)
             }
         }
         if (handle.ai) {
-            options += VoiceOption(SYSTEM_VOICE, "使用手机自带语音", false)
+            options += VoiceOption(SYSTEM_VOICE, getString(R.string.rd_voice_use_system), false)
         } else {
             @Suppress("UNCHECKED_CAST")
             val system = (handle.navigator.voices as Set<AndroidTtsEngine.Voice>)
@@ -551,15 +553,16 @@ class ReaderActivity : FragmentActivity() {
                 .sortedWith(compareByDescending<AndroidTtsEngine.Voice> { it.quality.ordinal }.thenBy { it.id.value })
             options += system.map { v ->
                 val quality = when (v.quality) {
-                    AndroidTtsEngine.Voice.Quality.Highest, AndroidTtsEngine.Voice.Quality.High -> "高质量"
-                    AndroidTtsEngine.Voice.Quality.Normal -> "普通"
-                    else -> "较低"
+                    AndroidTtsEngine.Voice.Quality.Highest, AndroidTtsEngine.Voice.Quality.High -> getString(R.string.rd_voice_quality_high)
+                    AndroidTtsEngine.Voice.Quality.Normal -> getString(R.string.rd_voice_quality_normal)
+                    else -> getString(R.string.rd_voice_quality_low)
                 }
-                VoiceOption(v.id.value, "系统 · ${v.language.locale.displayName} · $quality${if (v.requiresNetwork) " · 需联网" else ""}\n${v.id.value}", v.id.value == chosen)
+                val network = if (v.requiresNetwork) " · " + getString(R.string.rd_voice_needs_network) else ""
+                VoiceOption(v.id.value, getString(R.string.rd_voice_system, v.language.locale.displayName, quality) + network + "\n" + v.id.value, v.id.value == chosen)
             }
         }
         if (VoiceCatalog.models.none { it.id in installed && lang in it.languages }) {
-            options.add(0, VoiceOption(DOWNLOAD_VOICES, if (VoiceCatalog.models.any { lang in it.languages }) "⬇ 下载更自然的 AI 语音…" else "⬇ AI 语音暂不支持这种语言", false))
+            options.add(0, VoiceOption(DOWNLOAD_VOICES, getString(if (VoiceCatalog.models.any { lang in it.languages }) R.string.rd_voice_download else R.string.rd_voice_ai_unsupported), false))
         }
         ttsVoices = options
     }
@@ -593,10 +596,10 @@ class ReaderActivity : FragmentActivity() {
     private fun onTtsError(error: TtsNavigator.Error) {
         val cause = (error as? TtsNavigator.Error.EngineError<*>)?.cause
         if (cause is AndroidTtsEngine.Error.LanguageMissingData) {
-            Toast.makeText(this, "手机缺少这种语言的语音数据，请在系统中下载", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.rd_tts_missing_data), Toast.LENGTH_LONG).show()
             runCatching { startActivity(Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA)) }
         } else {
-            Toast.makeText(this, "朗读出错：${cause?.message ?: error.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.rd_tts_error, cause?.message ?: error.message), Toast.LENGTH_LONG).show()
         }
         stopTts()
     }
@@ -653,11 +656,11 @@ class ReaderActivity : FragmentActivity() {
             if (mode != TranslationMode.OFF) {
                 val (from, to) = updated.translationPair()
                 if (!Translation.isDownloaded(from) || !Translation.isDownloaded(to)) {
-                    Toast.makeText(this@ReaderActivity, "正在下载翻译模型（每种语言约 30 MB，只需一次）…", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@ReaderActivity, getString(R.string.tr_downloading_models), Toast.LENGTH_LONG).show()
                 }
                 val ready = runCatching { Translation.prepare(from, to) }
                 if (ready.isFailure) {
-                    Toast.makeText(this@ReaderActivity, "模型下载失败，请联网后重试", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@ReaderActivity, getString(R.string.tr_download_failed), Toast.LENGTH_LONG).show()
                     return@launch
                 }
             }

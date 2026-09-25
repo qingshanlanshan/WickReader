@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings screen -->
+    <string name="set_back">返回</string>
+    <string name="set_title">设置</string>
+    <string name="set_section_general">通用</string>
+    <string name="set_lang_native_zh">中文</string>
+    <string name="set_lang_native_en">English</string>
+    <string name="set_section_ai_voice">朗读 · AI 语音</string>
+    <string name="set_ai_voice_intro">AI 语音在手机上离线合成，比系统语音自然得多。下载一次即可，不联网也能用。</string>
+    <string name="set_voice_zh">中文朗读声音</string>
+    <string name="set_voice_en">英文朗读声音</string>
+    <string name="set_prefer_ai">优先使用 AI 语音</string>
+    <string name="set_prefer_ai_desc">关闭后默认用手机自带的语音引擎</string>
+    <string name="set_section_import">导入</string>
+    <string name="set_scan_formats">扫描手机时查找的格式</string>
+    <string name="set_scan_mobi_note">MOBI / AZW3 暂时只会被列出（还不能打开）。</string>
+    <string name="set_scan_txt_min">忽略小于此大小的 TXT（排除日志、说明文件）</string>
+    <string name="set_no_limit">不限</string>
+    <string name="set_section_reading">阅读</string>
+    <string name="set_volume_keys">音量键翻页</string>
+    <string name="set_volume_keys_desc">朗读时音量键仍用来调音量</string>
+    <string name="set_to_simplified">繁体书默认显示为简体</string>
+    <string name="set_to_simplified_desc">每本书也可以在阅读设置里单独切换</string>
+    <string name="set_publisher_styles">使用书籍自带排版</string>
+    <string name="set_publisher_styles_desc">关闭时所有书统一使用你的字体、字号和行距</string>
+    <string name="set_section_storage">存储</string>
+    <string name="set_storage_books">书籍</string>
+    <string name="set_storage_voices">AI 语音</string>
+    <string name="set_storage_translations">翻译缓存</string>
+    <string name="set_translations_cleared">已清除翻译缓存</string>
+    <string name="set_clear_translations">清除翻译缓存</string>
+    <string name="set_section_about">关于</string>
+    <string name="set_about">青灯 %1$s · 所有数据只保存在这台手机上。\n\n使用的开源项目：Readium Kotlin Toolkit（BSD-3）、OpenCC 词库（Apache-2.0）、sherpa-onnx（Apache-2.0）、Kokoro-82M v1.1-zh（Apache-2.0）、Matcha-TTS、Piper 语音模型、Apache Commons Compress、Google ML Kit 翻译。</string>
+    <string name="set_preview">试听</string>
+    <string name="set_done">完成</string>
+    <string name="set_delete_voice_title">删除「%1$s」？</string>
+    <string name="set_delete_voice_message">以后需要时可以重新下载（约 %1$d MB）。</string>
+    <string name="set_delete">删除</string>
+    <string name="set_cancel">取消</string>
+    <string name="set_downloading">下载中 %1$d%%（%2$d MB）</string>
+    <string name="set_unpacking">正在解压…</string>
+    <string name="set_downloaded">已下载</string>
+    <string name="set_download_size">下载（%1$d MB）</string>
+
+    <!-- Scan screen -->
+    <string name="set_scan_title">扫描手机中的电子书</string>
+    <string name="set_rescan">重新扫描</string>
+    <string name="set_select_none">全不选</string>
+    <string name="set_select_all">全选</string>
+    <string name="set_import_count">导入 %1$d 本</string>
+    <string name="set_scan_need_access">需要「所有文件访问权限」</string>
+    <string name="set_scan_access_desc">扫描手机里的电子书需要读取存储空间的权限。书只会被复制到本应用里，不会上传到任何地方。</string>
+    <string name="set_grant_access">去授权</string>
+    <string name="set_scanning">正在扫描…</string>
+    <string name="set_scan_none">没有找到电子书</string>
+    <string name="set_scan_summary">找到 %1$d 个文件，其中 %2$d 个已在书架</string>
+    <string name="set_scan_summary_ignored">找到 %1$d 个文件，其中 %2$d 个已在书架（已忽略小于 %3$d KB 的 TXT / 网页）</string>
+    <string name="set_scan_in_library">已在书架</string>
+    <string name="set_scan_unsupported">暂不支持，可用 Calibre 转成 EPUB</string>
+
+    <!-- Scan formats -->
+    <string name="set_format_epub">EPUB</string>
+    <string name="set_format_pdf">PDF</string>
+    <string name="set_format_txt">TXT</string>
+    <string name="set_format_fb2">FB2</string>
+    <string name="set_format_docx">Word</string>
+    <string name="set_format_cbz">漫画 CBZ</string>
+    <string name="set_format_html">网页 HTML</string>
+    <string name="set_format_mobi">MOBI / AZW3</string>
+
+    <!-- AI voice catalog -->
+    <string name="tts_kokoro_title">Kokoro 中英文（推荐）</string>
+    <string name="tts_kokoro_short">Kokoro 中英文</string>
+    <string name="tts_kokoro_desc">最自然的声音，55 个女声 + 45 个男声，也能读英文。模型较大，需要较新的手机。</string>
+    <string name="tts_kokoro_license">Apache-2.0（hexgrad/Kokoro-82M-v1.1-zh）</string>
+    <string name="tts_baker_title">标贝女声 中文（快）</string>
+    <string name="tts_baker_short">标贝女声 中文</string>
+    <string name="tts_baker_desc">专业播音员录音训练，吐字清楚，合成极快，旧手机也流畅。一个女声。</string>
+    <string name="tts_baker_license">Matcha-TTS / icefall（Apache-2.0）；训练数据（标贝 BZNSYP）仅限非商业使用</string>
+    <string name="tts_amy_title">Amy 英文（轻量）</string>
+    <string name="tts_amy_short">Amy 英文</string>
+    <string name="tts_amy_desc">体积小、速度快的美式英语女声。</string>
+    <string name="tts_amy_license">Piper 模型（MIT / 公开数据集）</string>
+    <string name="tts_speaker_female_n">女声 %1$s</string>
+    <string name="tts_speaker_male_n">男声 %1$s</string>
+    <string name="tts_speaker_us_female">美式女声 %1$s</string>
+    <string name="tts_speaker_uk_female">英式女声 %1$s</string>
+    <string name="tts_speaker_baker">标贝女声</string>
+    <string name="tts_speaker_amy">Amy</string>
+
+    <!-- AI voice download / engine messages -->
+    <string name="tts_save_failed">无法保存语音文件</string>
+    <string name="tts_download_failed">下载失败</string>
+    <string name="tts_download_failed_http">下载失败（HTTP %1$d）</string>
+    <string name="tts_download_interrupted">下载中断，请重试</string>
+    <string name="tts_mirror_missing_model">镜像缺少模型文件</string>
+    <string name="tts_file_incomplete">文件不完整：%1$s</string>
+    <string name="tts_preview_failed">试听失败</string>
+    <string name="tts_no_voice">没有可读%1$s的 AI 语音</string>
+    <string name="tts_this_language">这种语言</string>
+    <string name="tts_synthesis_failed">AI 语音合成失败：%1$s</string>
+    <string name="tts_unknown_error">未知错误</string>
+    <string name="tts_load_failed">无法加载 AI 语音</string>
+</resources>

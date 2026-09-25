@@ -77,6 +77,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.qshlab.shelf.R
 import com.qshlab.shelf.data.Book
 import com.qshlab.shelf.data.languageLabel
 import com.qshlab.shelf.settings.GroupBy
@@ -137,13 +138,13 @@ fun LibraryScreen(
             val sel = selection
             if (sel != null) {
                 TopAppBar(
-                    navigationIcon = { IconButton(onClick = { selection = null }) { Icon(Icons.Filled.Close, "退出选择") } },
-                    title = { Text(if (sel.isEmpty()) "点选书籍" else "已选 ${sel.size} 本") },
+                    navigationIcon = { IconButton(onClick = { selection = null }) { Icon(Icons.Filled.Close, stringResource(R.string.lib_exit_selection)) } },
+                    title = { Text(if (sel.isEmpty()) stringResource(R.string.lib_select_books) else stringResource(R.string.lib_selected_count, sel.size)) },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
                     actions = {
                         TextButton(onClick = {
                             selection = state.items.flatMap { item -> if (item is ShelfItem.Single) listOf(item.book.id) else (item as ShelfItem.Stack).books.map { it.id } }.toSet()
-                        }) { Text("全选") }
+                        }) { Text(stringResource(R.string.lib_select_all)) }
                     },
                 )
             } else {
@@ -155,19 +156,19 @@ fun LibraryScreen(
                             TextField(
                                 value = query,
                                 onValueChange = { vm.query.value = it },
-                                placeholder = { Text("搜索书名、作者、系列") },
+                                placeholder = { Text(stringResource(R.string.lib_search_hint)) },
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                 colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent),
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         } else {
-                            Text("书架", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.lib_title), fontWeight = FontWeight.SemiBold)
                         }
                     },
                     actions = {
                         IconButton(onClick = { searching = !searching; if (!searching) vm.query.value = "" }) {
-                            Icon(if (searching) Icons.Filled.Close else Icons.Filled.Search, "搜索")
+                            Icon(if (searching) Icons.Filled.Close else Icons.Filled.Search, stringResource(R.string.lib_search))
                         }
                         IconButton(onClick = {
                             val next = ViewMode.entries[(s.viewMode.ordinal + 1) % ViewMode.entries.size]
@@ -179,20 +180,20 @@ fun LibraryScreen(
                                     ViewMode.LIST -> Icons.AutoMirrored.Filled.ViewList
                                     ViewMode.COMPACT -> Icons.Filled.ViewHeadline
                                 },
-                                "切换显示方式",
+                                stringResource(R.string.lib_toggle_view),
                             )
                         }
-                        IconButton(onClick = onOpenSettings) { Icon(Icons.Filled.Settings, "设置") }
+                        IconButton(onClick = onOpenSettings) { Icon(Icons.Filled.Settings, stringResource(R.string.lib_settings)) }
                         Box {
-                            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "更多") }
+                            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.lib_more)) }
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                                DropdownMenuItem(text = { Text("扫描手机中的电子书") }, onClick = { menu = false; onOpenScan() })
-                                DropdownMenuItem(text = { Text("导入文件（可多选）") }, onClick = { menu = false; importFiles() })
-                                DropdownMenuItem(text = { Text("导入文件夹") }, onClick = { menu = false; pickFolder.launch(null) })
-                                DropdownMenuItem(text = { Text("在线书库（OPDS）") }, onClick = { menu = false; onOpenCatalogs() })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.lib_menu_scan)) }, onClick = { menu = false; onOpenScan() })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.lib_menu_import_files)) }, onClick = { menu = false; importFiles() })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.lib_menu_import_folder)) }, onClick = { menu = false; pickFolder.launch(null) })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.lib_menu_catalogs)) }, onClick = { menu = false; onOpenCatalogs() })
                                 HorizontalDivider()
-                                DropdownMenuItem(text = { Text("选择多本书") }, onClick = { menu = false; selection = emptySet() })
-                                DropdownMenuItem(text = { Text("整理系列建议") }, onClick = { menu = false; onOpenSuggestions() })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.lib_menu_select)) }, onClick = { menu = false; selection = emptySet() })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.lib_menu_suggestions)) }, onClick = { menu = false; onOpenSuggestions() })
                             }
                         }
                     },
@@ -220,7 +221,7 @@ fun LibraryScreen(
         },
         floatingActionButton = {
             if (state.loaded && state.allBooks.isNotEmpty() && selection == null) {
-                ExtendedFloatingActionButton(onClick = onOpenScan, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("添加书") })
+                ExtendedFloatingActionButton(onClick = onOpenScan, icon = { Icon(Icons.Filled.Add, null) }, text = { Text(stringResource(R.string.lib_add_book)) })
             }
         },
     ) { padding ->
@@ -239,7 +240,7 @@ fun LibraryScreen(
                         }
                     })
                     if (state.items.isEmpty()) {
-                        Text("没有符合条件的书", Modifier.fillMaxWidth().padding(40.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.lib_no_matches), Modifier.fillMaxWidth().padding(40.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
                         ShelfItems(
                             state.items, s.viewMode, onOpenBook, openGroup,
@@ -282,10 +283,10 @@ fun LibraryScreen(
     confirmDelete?.let { ids ->
         AlertDialog(
             onDismissRequest = { confirmDelete = null },
-            title = { Text("删除 ${ids.size} 本书？") },
-            text = { Text("这些书会从书架和应用存储中删除，阅读进度和笔记也会一起删除。手机上的原文件不受影响。") },
-            confirmButton = { TextButton(onClick = { vm.deleteAll(ids); confirmDelete = null; selection = null }) { Text("删除") } },
-            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("取消") } },
+            title = { Text(stringResource(R.string.lib_delete_n_title, ids.size)) },
+            text = { Text(stringResource(R.string.lib_delete_n_text)) },
+            confirmButton = { TextButton(onClick = { vm.deleteAll(ids); confirmDelete = null; selection = null }) { Text(stringResource(R.string.lib_delete)) } },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.lib_cancel)) } },
         )
     }
 }
@@ -307,11 +308,11 @@ private fun SelectionActions(
         @Composable
         fun action(icon: ImageVector, label: String, on: Boolean, onClick: () -> Unit) =
             NavigationBarItem(selected = false, enabled = on, onClick = onClick, icon = { Icon(icon, null) }, label = { Text(label, maxLines = 1) })
-        action(Icons.Filled.CollectionsBookmark, "设为系列", enabled, onSeries)
-        action(if (allWant) Icons.Filled.BookmarkRemove else Icons.Filled.BookmarkAdd, if (allWant) "取消想读" else "想读", enabled, onWant)
-        action(if (allFinished) Icons.Filled.RemoveDone else Icons.Filled.DoneAll, if (allFinished) "未读完" else "已读完", enabled, onFinished)
-        action(Icons.Filled.Edit, "编辑", single, onEdit)
-        action(Icons.Filled.Delete, "删除", enabled, onDelete)
+        action(Icons.Filled.CollectionsBookmark, stringResource(R.string.lib_set_series), enabled, onSeries)
+        action(if (allWant) Icons.Filled.BookmarkRemove else Icons.Filled.BookmarkAdd, if (allWant) stringResource(R.string.lib_action_unwant) else stringResource(R.string.lib_action_want), enabled, onWant)
+        action(if (allFinished) Icons.Filled.RemoveDone else Icons.Filled.DoneAll, if (allFinished) stringResource(R.string.lib_action_unfinished) else stringResource(R.string.lib_action_finished), enabled, onFinished)
+        action(Icons.Filled.Edit, stringResource(R.string.lib_action_edit), single, onEdit)
+        action(Icons.Filled.Delete, stringResource(R.string.lib_delete), enabled, onDelete)
     }
 }
 
@@ -355,33 +356,33 @@ private fun ShelfControls(state: LibraryState, vm: LibraryViewModel) {
                 FilterChip(
                     selected = active.isNotEmpty(),
                     onClick = { open = "filter" },
-                    label = { Text(if (active.isEmpty()) "筛选" else active.joinToString(" · ")) },
+                    label = { Text(if (active.isEmpty()) stringResource(R.string.lib_filter) else active.joinToString(" · ")) },
                     leadingIcon = { Icon(Icons.Filled.FilterList, null) },
                 )
                 DropdownMenu(expanded = open == "filter", onDismissRequest = { open = null }) {
-                    MenuHeader("阅读状态")
+                    MenuHeader(stringResource(R.string.lib_filter_status))
                     StatusFilter.entries.forEach { f ->
                         DropdownMenuItem(text = { Text(stringResource(f.label) + if (f == s.status) "  ✓" else "") }, onClick = { vm.updateSettings { it.copy(status = f) } })
                     }
                     if (state.languages.size > 1) {
                         HorizontalDivider()
-                        MenuHeader("语言")
-                        DropdownMenuItem(text = { Text("全部" + if (s.language == null) "  ✓" else "") }, onClick = { vm.updateSettings { it.copy(language = null) } })
+                        MenuHeader(stringResource(R.string.lib_filter_language))
+                        DropdownMenuItem(text = { Text(stringResource(R.string.lib_filter_all) + if (s.language == null) "  ✓" else "") }, onClick = { vm.updateSettings { it.copy(language = null) } })
                         state.languages.forEach { l ->
                             DropdownMenuItem(text = { Text(languageLabel(l) + if (l == s.language) "  ✓" else "") }, onClick = { vm.updateSettings { it.copy(language = l) } })
                         }
                     }
                     if (state.formats.size > 1) {
                         HorizontalDivider()
-                        MenuHeader("格式")
-                        DropdownMenuItem(text = { Text("全部" + if (s.format == null) "  ✓" else "") }, onClick = { vm.updateSettings { it.copy(format = null) } })
+                        MenuHeader(stringResource(R.string.lib_filter_format))
+                        DropdownMenuItem(text = { Text(stringResource(R.string.lib_filter_all) + if (s.format == null) "  ✓" else "") }, onClick = { vm.updateSettings { it.copy(format = null) } })
                         state.formats.forEach { f ->
                             DropdownMenuItem(text = { Text(f.uppercase() + if (f == s.format) "  ✓" else "") }, onClick = { vm.updateSettings { it.copy(format = f) } })
                         }
                     }
                     if (s.filtering) {
                         HorizontalDivider()
-                        DropdownMenuItem(text = { Text("清除筛选") }, onClick = {
+                        DropdownMenuItem(text = { Text(stringResource(R.string.lib_filter_clear)) }, onClick = {
                             open = null
                             vm.updateSettings { it.copy(status = StatusFilter.ALL, language = null, format = null) }
                         })
@@ -391,7 +392,7 @@ private fun ShelfControls(state: LibraryState, vm: LibraryViewModel) {
         }
         item {
             Text(
-                "${state.shownCount} 本",
+                stringResource(R.string.lib_book_count, state.shownCount),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 4.dp),
@@ -421,7 +422,7 @@ private fun SuggestionBanner(count: Int, onOpen: () -> Unit) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.AutoAwesome, null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
             Text(
-                "发现 $count 组可能是同一系列的书，点此确认",
+                stringResource(R.string.lib_suggestion_banner, count),
                 Modifier.weight(1f).padding(start = 10.dp),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -481,10 +482,10 @@ fun ShelfItems(
 @Composable
 private fun EmptyShelf(onScan: () -> Unit, onImportFiles: () -> Unit, onOpenCatalogs: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("书架是空的", style = MaterialTheme.typography.titleLarge)
-        Text("支持 EPUB、PDF、TXT、FB2、Word、漫画 CBZ", Modifier.padding(top = 8.dp, bottom = 20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        ExtendedFloatingActionButton(onClick = onScan, icon = { Icon(Icons.Filled.Search, null) }, text = { Text("扫描手机中的电子书") })
-        TextButton(onClick = onImportFiles, modifier = Modifier.padding(top = 8.dp)) { Text("选择文件导入") }
-        TextButton(onClick = onOpenCatalogs) { Text("从在线书库下载公版书") }
+        Text(stringResource(R.string.lib_empty_title), style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.lib_empty_formats), Modifier.padding(top = 8.dp, bottom = 20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        ExtendedFloatingActionButton(onClick = onScan, icon = { Icon(Icons.Filled.Search, null) }, text = { Text(stringResource(R.string.lib_menu_scan)) })
+        TextButton(onClick = onImportFiles, modifier = Modifier.padding(top = 8.dp)) { Text(stringResource(R.string.lib_empty_import)) }
+        TextButton(onClick = onOpenCatalogs) { Text(stringResource(R.string.lib_empty_catalogs)) }
     }
 }

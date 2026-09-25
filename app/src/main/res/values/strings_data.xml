@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cat_gutenberg">Project Gutenberg (70,000+ public-domain books, incl. Chinese classics)</string>
+    <string name="cat_no_results">Nothing found for “%1$s”. Gutenberg titles are mostly in English or Traditional Chinese; try an author, pinyin or the English title.</string>
+    <string name="cat_cannot_open">Can\'t open this catalog (check the network or the address)</string>
+    <string name="cat_not_opds">This address isn\'t an OPDS catalog</string>
+    <string name="cat_chinese_books">Chinese books</string>
+    <string name="cat_japanese_books">Japanese books</string>
+    <string name="cat_epub_images">EPUB (with images)</string>
+    <string name="cat_pdf">PDF</string>
+    <string name="cat_kindle_unsupported">Kindle (not supported)</string>
+    <string name="cat_file">File</string>
+    <string name="cat_download_failed_http">Download failed (HTTP %1$d)</string>
+    <string name="cat_too_many_redirects">Too many redirects</string>
+    <string name="cat_title">Online catalogs</string>
+    <string name="cat_add">Add catalog</string>
+    <string name="cat_explain">OPDS is an open standard for e-book catalogs. You can add any OPDS address, such as your own Calibre / calibre-web library.</string>
+    <string name="cat_add_title">Add an OPDS catalog</string>
+    <string name="cat_name">Name</string>
+    <string name="cat_url">OPDS address</string>
+    <string name="cat_search_title">Search: %1$s</string>
+    <string name="cat_search_hint">Search titles or authors</string>
+    <string name="cat_next_page">Next page ›</string>
+    <string name="cat_empty">Nothing here</string>
+    <string name="cat_downloading">Downloading “%1$s”…</string>
+    <string name="cat_added">Added to your shelf: “%1$s”</string>
+    <string name="cat_not_added">Not added: %1$s</string>
+    <string name="cat_download_failed">Download failed: %1$s</string>
+    <string name="cat_untitled">(Untitled)</string>
+    <string name="cat_no_files">This book has no downloadable files</string>
+    <string name="cat_download_format">Download %1$s</string>
+    <string name="common_back">Back</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_add">Add</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="imp_already">Already on your shelf</string>
+    <string name="imp_cannot_read">Can\'t read the file</string>
+    <string name="imp_unsupported_ebook">Not supported yet: .%1$s (Calibre can convert it to EPUB)</string>
+    <string name="imp_unsupported">Not supported: .%1$s</string>
+    <string name="imp_cannot_parse">Couldn\'t read this %1$s</string>
+    <string name="imp_empty">The file is empty</string>
+    <string name="imp_broken">The file is damaged or not supported</string>
+</resources>

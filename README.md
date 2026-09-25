@@ -1,6 +1,6 @@
-# Shelf (placeholder name)
+# 青灯 Qingdeng
 
-A personal Android e-book reader in the spirit of ReadEra: a tidy modern bookshelf, series
+A personal Android e-book reader (package `com.qshlab.shelf`, kept from the working name "Shelf" so updates install over earlier builds) in the spirit of ReadEra: a tidy modern bookshelf, series
 grouping, 繁→简, read-aloud, translation. Everything runs on the phone; there is no server.
 
 ## Features
@@ -23,6 +23,9 @@ grouping, 繁→简, read-aloud, translation. Everything runs on the phone; ther
 import: TXT / MD (UTF-8/16, GB18030/GBK, Big5; chapters detected), FB2 / FB2.ZIP (with series), DOCX
 (headings or 第N章 lines become chapters), HTML, CBZ comics (fixed-layout pages). MOBI / AZW3 are
 listed by the scan but not opened yet
+
+**Interface**: English and 中文 (follows the phone, or pick in Settings → Language); string resources in
+`res/values*/strings*.xml`
 
 **Reading**
 - Progress as 第 123 / 500 页 · 25% (Readium positions: fixed ~1 KB pages, so the count doesn't change

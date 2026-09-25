@@ -1,14 +1,33 @@
 package com.qshlab.shelf.tts
 
+import android.content.Context
+import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.qshlab.shelf.R
+
 enum class ModelKind { KOKORO, VITS, MATCHA }
 
-data class Speaker(val sid: Int, val name: String, val language: String)
+/** [name] is a string resource; when [nameArg] is set it is a pattern filled with it (e.g. "女声 %1$s"). */
+data class Speaker(val sid: Int, @StringRes val name: Int, val language: String, val nameArg: String? = null)
+
+fun Speaker.displayName(context: Context): String =
+    if (nameArg == null) context.getString(name) else context.getString(name, nameArg)
+
+@Composable
+fun Speaker.displayName(): String =
+    if (nameArg == null) stringResource(name) else stringResource(name, nameArg)
+
+/** The model's name without the note in brackets, e.g. "Kokoro 中英文". */
+fun VoiceModel.shortTitle(context: Context): String = context.getString(shortName)
 
 /** An on-device neural voice model (sherpa-onnx), downloaded on demand. */
 data class VoiceModel(
     val id: String,
-    val title: String,
-    val description: String,
+    @StringRes val title: Int,
+    /** [title] without the note in brackets. */
+    @StringRes val shortName: Int,
+    @StringRes val description: Int,
     /** Base language codes it can read: "zh", "en". */
     val languages: Set<String>,
     val downloadMb: Int,
@@ -18,7 +37,7 @@ data class VoiceModel(
     val defaults: Map<String, Int>,
     /** Model file inside the unpacked folder. */
     val modelFile: String,
-    val license: String,
+    @StringRes val license: Int,
     /** Hugging Face mirror with the files unpacked (csukuangfj/<id>): no slow bzip2 step on the phone. */
     val huggingFace: Boolean = false,
     /** Files fetched separately, e.g. a vocoder: file name → URL. */
@@ -37,55 +56,58 @@ object VoiceCatalog {
         listOf(9, 10, 11, 12, 13, 14, 15, 16, 20, 25, 29, 30, 31, 33, 34, 35, 37, 41, 45, 50, 52, 53, 54, 55, 56, 57, 58, 61, 62, 63, 64, 65, 66, 68, 69, 80, 81, 82, 89, 91, 95, 96, 97, 98, 100)
             .map { "zm_%03d".format(it) }
 
-    private fun kokoroLabel(name: String): String {
+    private fun kokoroSpeaker(sid: Int, name: String, language: String): Speaker {
         val (prefix, rest) = name.split('_', limit = 2)
         return when (prefix) {
-            "zf" -> "女声 $rest"
-            "zm" -> "男声 $rest"
-            "af" -> "美式女声 ${rest.replaceFirstChar { it.uppercase() }}"
-            else -> "英式女声 ${rest.replaceFirstChar { it.uppercase() }}"
+            "zf" -> Speaker(sid, R.string.tts_speaker_female_n, language, rest)
+            "zm" -> Speaker(sid, R.string.tts_speaker_male_n, language, rest)
+            "af" -> Speaker(sid, R.string.tts_speaker_us_female, language, rest.replaceFirstChar { it.uppercase() })
+            else -> Speaker(sid, R.string.tts_speaker_uk_female, language, rest.replaceFirstChar { it.uppercase() })
         }
     }
 
     val models = listOf(
         VoiceModel(
             id = "kokoro-multi-lang-v1_1",
-            title = "Kokoro 中英文（推荐）",
-            description = "最自然的声音，55 个女声 + 45 个男声，也能读英文。模型较大，需要较新的手机。",
+            title = R.string.tts_kokoro_title,
+            shortName = R.string.tts_kokoro_short,
+            description = R.string.tts_kokoro_desc,
             languages = setOf("zh", "en"),
             downloadMb = 406,
             kind = ModelKind.KOKORO,
-            speakers = kokoroNames.mapIndexed { i, n -> Speaker(i, kokoroLabel(n), if (n.startsWith("z")) "zh" else "en") },
+            speakers = kokoroNames.mapIndexed { i, n -> kokoroSpeaker(i, n, if (n.startsWith("z")) "zh" else "en") },
             defaults = mapOf("zh" to 3, "en" to 0),
             modelFile = "model.onnx",
-            license = "Apache-2.0（hexgrad/Kokoro-82M-v1.1-zh）",
+            license = R.string.tts_kokoro_license,
             huggingFace = true,
         ),
         VoiceModel(
             id = "matcha-icefall-zh-baker",
-            title = "标贝女声 中文（快）",
-            description = "专业播音员录音训练，吐字清楚，合成极快，旧手机也流畅。一个女声。",
+            title = R.string.tts_baker_title,
+            shortName = R.string.tts_baker_short,
+            description = R.string.tts_baker_desc,
             languages = setOf("zh"),
             downloadMb = 131,
             kind = ModelKind.MATCHA,
-            speakers = listOf(Speaker(0, "标贝女声", "zh")),
+            speakers = listOf(Speaker(0, R.string.tts_speaker_baker, "zh")),
             defaults = mapOf("zh" to 0),
             modelFile = "model-steps-3.onnx",
-            license = "Matcha-TTS / icefall（Apache-2.0）；训练数据（标贝 BZNSYP）仅限非商业使用",
+            license = R.string.tts_baker_license,
             huggingFace = true,
             extraFiles = mapOf("vocos-22khz-univ.onnx" to "https://github.com/k2-fsa/sherpa-onnx/releases/download/vocoder-models/vocos-22khz-univ.onnx"),
         ),
         VoiceModel(
             id = "vits-piper-en_US-amy-medium-int8",
-            title = "Amy 英文（轻量）",
-            description = "体积小、速度快的美式英语女声。",
+            title = R.string.tts_amy_title,
+            shortName = R.string.tts_amy_short,
+            description = R.string.tts_amy_desc,
             languages = setOf("en"),
             downloadMb = 21,
             kind = ModelKind.VITS,
-            speakers = listOf(Speaker(0, "Amy", "en")),
+            speakers = listOf(Speaker(0, R.string.tts_speaker_amy, "en")),
             defaults = mapOf("en" to 0),
             modelFile = "en_US-amy-medium.onnx",
-            license = "Piper 模型（MIT / 公开数据集）",
+            license = R.string.tts_amy_license,
         ),
     )
 

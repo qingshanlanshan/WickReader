@@ -73,7 +73,7 @@ class EpubBuilder(val title: String, val author: String?, val language: String) 
             }
             put(
                 "OEBPS/nav.xhtml",
-                """<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><title>目录</title></head><body><nav epub:type="toc"><ol>$nav</ol></nav></body></html>""".toByteArray(),
+                """<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><title>${ContentLabels.of(language).toc}</title></head><body><nav epub:type="toc"><ol>$nav</ol></nav></body></html>""".toByteArray(),
             )
             val meta = StringBuilder()
             author?.let { meta.append("<dc:creator>${esc(it)}</dc:creator>") }

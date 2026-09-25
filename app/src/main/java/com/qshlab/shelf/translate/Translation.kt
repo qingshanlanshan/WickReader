@@ -1,5 +1,8 @@
 package com.qshlab.shelf.translate
 
+import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import com.google.android.gms.tasks.Task
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.common.model.RemoteModelManager
@@ -8,6 +11,7 @@ import com.google.mlkit.nl.translate.TranslateRemoteModel
 import com.google.mlkit.nl.translate.Translation as MlTranslation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
+import com.qshlab.shelf.R
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -79,16 +83,20 @@ object Translation {
         return t.translate(text).await()
     }
 
-    val displayNames = mapOf(
-        TranslateLanguage.CHINESE to "中文",
-        TranslateLanguage.ENGLISH to "英文",
-        TranslateLanguage.JAPANESE to "日文",
-        TranslateLanguage.KOREAN to "韩语",
-        TranslateLanguage.FRENCH to "法语",
-        TranslateLanguage.GERMAN to "德语",
-        TranslateLanguage.SPANISH to "西班牙语",
-        TranslateLanguage.RUSSIAN to "俄语",
+    private val nameRes = mapOf(
+        TranslateLanguage.CHINESE to R.string.lang_zh,
+        TranslateLanguage.ENGLISH to R.string.lang_en,
+        TranslateLanguage.JAPANESE to R.string.lang_ja,
+        TranslateLanguage.KOREAN to R.string.tr_lang_ko,
+        TranslateLanguage.FRENCH to R.string.tr_lang_fr,
+        TranslateLanguage.GERMAN to R.string.tr_lang_de,
+        TranslateLanguage.SPANISH to R.string.tr_lang_es,
+        TranslateLanguage.RUSSIAN to R.string.tr_lang_ru,
     )
 
-    fun nameOf(lang: String) = displayNames[lang] ?: lang
+    /** The language's name in the app's language (the ML Kit code when there is none). */
+    fun nameOf(context: Context, lang: String): String = nameRes[lang]?.let { context.getString(it) } ?: lang
+
+    @Composable
+    fun nameOf(lang: String): String = nameRes[lang]?.let { stringResource(it) } ?: lang
 }

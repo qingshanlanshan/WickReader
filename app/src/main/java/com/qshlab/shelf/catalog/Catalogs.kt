@@ -5,6 +5,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import android.content.Context
+import androidx.annotation.StringRes
+import com.qshlab.shelf.R
 import com.qshlab.shelf.chinese.ChineseConverter
 import java.io.File
 import java.net.HttpURLConnection
@@ -22,7 +24,8 @@ import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.util.AbsoluteUrl
 import org.readium.r2.shared.util.Url
 
-data class Catalog(val name: String, val url: String, val builtIn: Boolean = false)
+/** [nameRes]: the display name of a built-in catalog, resolved in the current language. */
+data class Catalog(val name: String, val url: String, val builtIn: Boolean = false, @StringRes val nameRes: Int? = null)
 
 /**
  * OPDS catalogs: open book-catalog feeds (the standard KOReader, Moon+ Reader, Calibre use).
@@ -32,7 +35,7 @@ class CatalogRepository(private val store: DataStore<Preferences>) {
     private val key = stringPreferencesKey("catalogs.user")
 
     val builtIn = listOf(
-        Catalog("Project Gutenberg（7 万多本公版书，含中文古典）", "https://www.gutenberg.org/ebooks.opds/", builtIn = true),
+        Catalog("Project Gutenberg", "https://www.gutenberg.org/ebooks.opds/", builtIn = true, nameRes = R.string.cat_gutenberg),
     )
 
     val catalogs: Flow<List<Catalog>> = store.data.map { p ->
@@ -62,35 +65,35 @@ object Opds {
     private const val GUTENBERG_SEARCH = "https://www.gutenberg.org/ebooks/search.opds/?query="
 
     suspend fun load(context: Context, url: String): FeedResult {
-        val first = loadOnce(url)
+        val first = loadOnce(context, url)
         // Gutenberg catalogs Chinese books in 繁體 (sometimes 简体): searchUrl() sent the 繁體 form,
         // so if that finds nothing, try the 简体 one.
         val query = gutenbergQuery(url)
         if (query != null && query.any(::isCjk) && (first as? FeedResult.Loaded)?.isEmpty() != false) {
             val simplified = ChineseConverter.get(context).toSimplified(query)
-            if (simplified != query) (loadOnce(GUTENBERG_SEARCH + URLEncoder.encode(simplified, "UTF-8")) as? FeedResult.Loaded)
+            if (simplified != query) (loadOnce(context, GUTENBERG_SEARCH + URLEncoder.encode(simplified, "UTF-8")) as? FeedResult.Loaded)
                 ?.takeIf { !it.isEmpty() }?.let { return it }
         }
         if (query != null && (first as? FeedResult.Loaded)?.isEmpty() != false) {
-            return FeedResult.Failed("没有找到「$query」。古腾堡的书名多为英文或繁体中文，可以试试作者名、拼音或英文书名。")
+            return FeedResult.Failed(context.getString(R.string.cat_no_results, query))
         }
         return first
     }
 
-    private suspend fun loadOnce(url: String): FeedResult {
+    private suspend fun loadOnce(context: Context, url: String): FeedResult {
         val parsed = OPDS1Parser.parseUrlString(url).getOrNull()
-            ?: return FeedResult.Failed("无法打开这个书库（请检查网络或地址）")
+            ?: return FeedResult.Failed(context.getString(R.string.cat_cannot_open))
         // Gutenberg answers an empty search with one "No records found." pseudo-entry.
         val feed = parsed.feed?.let { f ->
             f.copy(
                 navigation = f.navigation.filter { it.title != "No records found." },
                 publications = f.publications.filter { it.metadata.title != "No records found." },
             )
-        } ?: return FeedResult.Failed("这个地址不是 OPDS 书库")
+        } ?: return FeedResult.Failed(context.getString(R.string.cat_not_opds))
         val template = runCatching { OPDS1Parser.retrieveOpenSearchTemplate(feed).getOrNull() }.getOrNull()
             ?: gutenbergSearch(url)
         val shortcuts = if (url.trimEnd('/').endsWith("gutenberg.org/ebooks.opds")) {
-            listOf("中文书" to GUTENBERG_SEARCH + "l.zh", "日文书" to GUTENBERG_SEARCH + "l.ja")
+            listOf(context.getString(R.string.cat_chinese_books) to GUTENBERG_SEARCH + "l.zh", context.getString(R.string.cat_japanese_books) to GUTENBERG_SEARCH + "l.ja")
         } else {
             emptyList()
         }
@@ -129,21 +132,23 @@ object Opds {
 
     fun isEpub(link: Link) = link.mediaType?.toString()?.contains("epub") == true
 
-    fun label(link: Link): String {
+    fun isPdf(link: Link) = link.mediaType?.toString()?.contains("pdf") == true
+
+    fun label(context: Context, link: Link): String {
         val type = link.mediaType?.toString().orEmpty()
         val href = link.href.toString()
         return when {
-            "epub" in type && ("images" in href || "epub3" in href) -> "EPUB（含插图）"
+            "epub" in type && ("images" in href || "epub3" in href) -> context.getString(R.string.cat_epub_images)
             "epub" in type -> "EPUB"
-            "pdf" in type -> "PDF（暂不支持）"
-            "kindle" in type || "mobi" in type -> "Kindle（暂不支持）"
+            "pdf" in type -> context.getString(R.string.cat_pdf)
+            "kindle" in type || "mobi" in type -> context.getString(R.string.cat_kindle_unsupported)
             "text/plain" in type -> "TXT"
-            else -> type.ifBlank { "文件" }
+            else -> type.ifBlank { context.getString(R.string.cat_file) }
         }
     }
 
     /** Downloads [url] into [dir], following redirects. */
-    suspend fun download(url: String, dir: File, fileName: String): File = withContext(Dispatchers.IO) {
+    suspend fun download(context: Context, url: String, dir: File, fileName: String): File = withContext(Dispatchers.IO) {
         dir.mkdirs()
         var current = URL(url)
         repeat(5) {
@@ -158,11 +163,11 @@ object Opds {
                 conn.disconnect()
                 return@repeat
             }
-            if (code !in 200..299) throw IllegalStateException("下载失败（HTTP $code）")
+            if (code !in 200..299) throw IllegalStateException(context.getString(R.string.cat_download_failed_http, code))
             val out = File(dir, fileName)
             conn.inputStream.use { input -> out.outputStream().use { input.copyTo(it) } }
             return@withContext out
         }
-        throw IllegalStateException("重定向次数过多")
+        throw IllegalStateException(context.getString(R.string.cat_too_many_redirects))
     }
 }

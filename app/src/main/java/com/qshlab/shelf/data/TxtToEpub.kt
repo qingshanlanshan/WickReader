@@ -17,7 +17,7 @@ import java.util.zip.ZipOutputStream
 object TxtToEpub {
     data class Chapter(val title: String, val lines: List<String>)
 
-    data class Result(val title: String, val author: String?, val charset: String, val chapters: List<Chapter>)
+    data class Result(val title: String, val author: String?, val charset: String, val chapters: List<Chapter>, val language: String = "zh")
 
     // Frequent characters in each script: whichever decoding produces more of them wins.
     private const val COMMON_SIMPLIFIED = "的一是不了人我在有他这中大来上个国到说们为子和你地出道也时年得就那要下以生会自着去之过家学对可她里后小么心多天而能好都然没日于起还发成事只作当想看文无开手十用"
@@ -69,12 +69,14 @@ object TxtToEpub {
         val author = lines.take(40).firstNotNullOfOrNull { AUTHOR.matchEntire(it)?.groupValues?.get(2) }?.trim()
         val title = fileName.substringBeforeLast('.').replace(Regex("[《》]"), "").trim()
 
+        val language = EpubBuilder.guessLanguage(text.take(5000))
+        val labels = ContentLabels.of(language)
         val chapters = mutableListOf<Chapter>()
-        var currentTitle = "卷首"
+        var currentTitle = labels.frontMatter
         var current = mutableListOf<String>()
         fun flush() {
             val body = current.filter { it.isNotBlank() }
-            if (body.isNotEmpty() || chapters.isNotEmpty() || currentTitle != "卷首") chapters += Chapter(currentTitle, body)
+            if (body.isNotEmpty() || chapters.isNotEmpty() || currentTitle != labels.frontMatter) chapters += Chapter(currentTitle, body)
             current = mutableListOf()
         }
         for (line in lines) {
@@ -87,15 +89,15 @@ object TxtToEpub {
             }
         }
         flush()
-        // A leading "卷首" chunk with nothing but blank lines is dropped by flush(); an intro stays.
+        // A leading front-matter chunk with nothing but blank lines is dropped by flush(); an intro stays.
 
-        val real = chapters.count { it.title != "卷首" }
-        val result = if (real >= 2) chapters else splitBySize(lines.map { it.trim() }.filter { it.isNotBlank() })
-        return Result(title, author, "", result)
+        val real = chapters.count { it.title != labels.frontMatter }
+        val result = if (real >= 2) chapters else splitBySize(lines.map { it.trim() }.filter { it.isNotBlank() }, labels)
+        return Result(title, author, "", result, language)
     }
 
     /** No chapter headings found: cut into parts of ~6000 characters at paragraph boundaries. */
-    private fun splitBySize(paragraphs: List<String>): List<Chapter> {
+    private fun splitBySize(paragraphs: List<String>, labels: ContentLabels): List<Chapter> {
         val parts = mutableListOf<Chapter>()
         var buf = mutableListOf<String>()
         var size = 0
@@ -103,12 +105,12 @@ object TxtToEpub {
             buf += p
             size += p.length
             if (size >= 6000) {
-                parts += Chapter("第${parts.size + 1}部分", buf)
+                parts += Chapter(labels.part(parts.size + 1), buf)
                 buf = mutableListOf()
                 size = 0
             }
         }
-        if (buf.isNotEmpty() || parts.isEmpty()) parts += Chapter("第${parts.size + 1}部分", buf)
+        if (buf.isNotEmpty() || parts.isEmpty()) parts += Chapter(labels.part(parts.size + 1), buf)
         return parts
     }
 
@@ -159,12 +161,12 @@ object TxtToEpub {
             }
             put(
                 "OEBPS/nav.xhtml",
-                """<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><title>目录</title></head><body><nav epub:type="toc"><ol>$nav</ol></nav></body></html>""",
+                """<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><title>${ContentLabels.of(book.language).toc}</title></head><body><nav epub:type="toc"><ol>$nav</ol></nav></body></html>""",
             )
             val authorTag = book.author?.let { "<dc:creator>${esc(it)}</dc:creator>" } ?: ""
             put(
                 "OEBPS/content.opf",
-                """<?xml version="1.0" encoding="utf-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="uid"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="uid">urn:uuid:${UUID.randomUUID()}</dc:identifier><dc:title>${esc(book.title)}</dc:title>$authorTag<dc:language>zh</dc:language><meta property="dcterms:modified">2026-01-01T00:00:00Z</meta></metadata><manifest><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>$manifest</manifest><spine>$spine</spine></package>""",
+                """<?xml version="1.0" encoding="utf-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="uid"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="uid">urn:uuid:${UUID.randomUUID()}</dc:identifier><dc:title>${esc(book.title)}</dc:title>$authorTag<dc:language>${book.language}</dc:language><meta property="dcterms:modified">2026-01-01T00:00:00Z</meta></metadata><manifest><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>$manifest</manifest><spine>$spine</spine></package>""",
             )
         }
     }

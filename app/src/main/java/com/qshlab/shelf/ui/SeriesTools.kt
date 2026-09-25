@@ -39,8 +39,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.qshlab.shelf.R
 import com.qshlab.shelf.data.Book
 import com.qshlab.shelf.data.SeriesSuggester
 
@@ -71,27 +73,27 @@ fun SeriesDialog(
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("设为系列") },
+        title = { Text(stringResource(R.string.lib_set_series)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text("系列名") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.lib_series_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 val chips = existingSeries.filter { it != name && (name.isBlank() || it.contains(name.take(2))) }.take(8)
                 if (chips.isNotEmpty()) {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(chips) { s -> SuggestionChip(onClick = { name = s }, label = { Text(s, maxLines = 1) }) }
                     }
                 }
-                Text("按顺序编号（用箭头调整）", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.lib_series_order_hint), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 LazyColumn(Modifier.heightIn(max = 320.dp)) {
                     itemsIndexed(order, key = { _, b -> b.id }) { i, b ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("${i + 1}", Modifier.width(28.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                             Text(b.title, Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                             IconButton(enabled = i > 0, onClick = { order = order.toMutableList().apply { add(i - 1, removeAt(i)) } }) {
-                                Icon(Icons.Filled.KeyboardArrowUp, "上移")
+                                Icon(Icons.Filled.KeyboardArrowUp, stringResource(R.string.lib_move_up))
                             }
                             IconButton(enabled = i < order.lastIndex, onClick = { order = order.toMutableList().apply { add(i + 1, removeAt(i)) } }) {
-                                Icon(Icons.Filled.KeyboardArrowDown, "下移")
+                                Icon(Icons.Filled.KeyboardArrowDown, stringResource(R.string.lib_move_down))
                             }
                         }
                     }
@@ -99,12 +101,12 @@ fun SeriesDialog(
             }
         },
         confirmButton = {
-            Button(enabled = name.isNotBlank(), onClick = { onConfirm(name, order, order.indices.map { it + 1.0 }) }) { Text("确定") }
+            Button(enabled = name.isNotBlank(), onClick = { onConfirm(name, order, order.indices.map { it + 1.0 }) }) { Text(stringResource(R.string.lib_ok)) }
         },
         dismissButton = {
             Row {
-                if (books.any { it.series != null }) TextButton(onClick = { onConfirm(null, order, order.map { null }) }) { Text("移出系列") }
-                TextButton(onClick = onDismiss) { Text("取消") }
+                if (books.any { it.series != null }) TextButton(onClick = { onConfirm(null, order, order.map { null }) }) { Text(stringResource(R.string.lib_remove_from_series)) }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.lib_cancel)) }
             }
         },
     )
@@ -118,21 +120,21 @@ fun SuggestionsScreen(vm: LibraryViewModel, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
-                title = { Text("整理系列") },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.lib_back)) } },
+                title = { Text(stringResource(R.string.lib_suggestions_title)) },
             )
         },
     ) { padding ->
         LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 Text(
-                    "根据书名猜出的系列。确认前可以改名、去掉不属于的书；也可以在书架上长按选中几本书，手动「设为系列」。",
+                    stringResource(R.string.lib_suggestions_intro),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             if (state.suggestions.isEmpty()) item {
-                Text("暂时没有新的建议", Modifier.padding(vertical = 24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.lib_suggestions_empty), Modifier.padding(vertical = 24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             items(state.suggestions, key = { it.key }) { s -> SuggestionCard(s, vm) }
         }
@@ -146,15 +148,15 @@ private fun SuggestionCard(s: SeriesSuggester.Suggestion, vm: LibraryViewModel) 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (s.joinsExisting) {
-                Text("加入已有系列「${s.name}」", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.lib_join_series, s.name), style = MaterialTheme.typography.titleSmall)
             } else {
-                OutlinedTextField(name, { name = it }, label = { Text("系列名") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.lib_series_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             }
             s.members.forEach { m ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = m.id in checked, onCheckedChange = { on -> checked = if (on) checked + m.id else checked - m.id })
                     Text(
-                        (m.index?.let { "第${formatIndex(it)}卷 · " } ?: "") + m.title,
+                        (m.index?.let { stringResource(R.string.lib_volume_n, formatIndex(it)) + " · " } ?: "") + m.title,
                         Modifier.weight(1f),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -163,11 +165,11 @@ private fun SuggestionCard(s: SeriesSuggester.Suggestion, vm: LibraryViewModel) 
                 }
             }
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                TextButton(onClick = { vm.dismissSuggestion(s) }) { Text("忽略") }
+                TextButton(onClick = { vm.dismissSuggestion(s) }) { Text(stringResource(R.string.lib_ignore)) }
                 Button(
                     enabled = name.isNotBlank() && (checked.size >= 2 || (s.joinsExisting && checked.isNotEmpty())),
                     onClick = { vm.acceptSuggestion(s, s.members.map { it.id }.filter { it in checked }, name) },
-                ) { Text("确认") }
+                ) { Text(stringResource(R.string.lib_confirm)) }
             }
         }
     }

@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,6 +43,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.qshlab.shelf.R
 import com.qshlab.shelf.data.Book
 import java.io.File
 import kotlin.math.abs
@@ -100,13 +102,15 @@ private fun Book.subtitle(): String = listOfNotNull(
 
 fun formatIndex(i: Double): String = if (i == i.roundToInt().toDouble()) i.roundToInt().toString() else i.toString()
 
-private fun percent(p: Float): String = if (p <= 0f) "未读" else if (p >= 0.995f) "已读完" else "${(p * 100).roundToInt()}%"
+@Composable
+private fun percent(p: Float): String = if (p <= 0f) stringResource(R.string.status_unread) else if (p >= 0.995f) stringResource(R.string.status_finished) else "${(p * 100).roundToInt()}%"
 
+@Composable
 private fun Book.status(): String = when {
-    finished -> "已读完"
+    finished -> stringResource(R.string.status_finished)
     progress > 0f -> percent(progress)
-    wantToRead -> "想读"
-    else -> "未读"
+    wantToRead -> stringResource(R.string.status_want)
+    else -> stringResource(R.string.status_unread)
 }
 
 /** Check mark shown on items while selecting several books. */
@@ -114,15 +118,16 @@ private fun Book.status(): String = when {
 private fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
     Icon(
         if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
-        if (selected) "已选" else "未选",
+        if (selected) stringResource(R.string.lib_selected) else stringResource(R.string.lib_not_selected),
         tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
         modifier = modifier.background(MaterialTheme.colorScheme.surface, CircleShape),
     )
 }
 
+@Composable
 private fun ShelfItem.Stack.subtitle() = when (kind) {
-    GroupKind.SERIES -> "系列 · ${books.size} 本 · ${books.first().author ?: ""}"
-    GroupKind.AUTHOR -> "作者 · ${books.size} 本"
+    GroupKind.SERIES -> stringResource(R.string.lib_series_count_author, books.size, books.first().author ?: "")
+    GroupKind.AUTHOR -> stringResource(R.string.lib_author_count, books.size)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -149,7 +154,7 @@ fun GridBookCell(book: Book, onClick: () -> Unit, onLongClick: () -> Unit, badge
                 Text(percent(book.progress), Modifier.padding(start = 6.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            Text(listOfNotNull(if (book.wantToRead) "想读" else null, book.author).joinToString(" · "), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(listOfNotNull(if (book.wantToRead) stringResource(R.string.status_want) else null, book.author).joinToString(" · "), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -170,12 +175,12 @@ fun GridStackCell(stack: ShelfItem.Stack, onClick: () -> Unit, onLongClick: (() 
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 6.dp),
             ) {
-                Text("${stack.books.size} 本", Modifier.padding(horizontal = 7.dp, vertical = 2.dp), color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.labelSmall)
+                Text(stringResource(R.string.lib_book_count, stack.books.size), Modifier.padding(horizontal = 7.dp, vertical = 2.dp), color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.labelSmall)
             }
             if (selected != null) SelectionMark(selected, Modifier.align(Alignment.TopEnd).padding(4.dp))
         }
         Text(stack.name, Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
-        Text(if (stack.kind == GroupKind.SERIES) "系列 · ${stack.books.first().author ?: ""}" else "作者", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(if (stack.kind == GroupKind.SERIES) stringResource(R.string.lib_series_by, stack.books.first().author ?: "") else stringResource(R.string.lib_author), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -241,7 +246,7 @@ fun CompactStackRow(stack: ShelfItem.Stack, onClick: () -> Unit, onLongClick: ((
     Row(Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         if (selected != null) SelectionMark(selected, Modifier.padding(end = 10.dp))
         Column(Modifier.weight(1f)) {
-            Text("${stack.name}（${stack.books.size} 本）", style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(stringResource(R.string.lib_stack_name_count, stack.name, stack.books.size), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(stack.subtitle(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         }
         Box(Modifier.size(8.dp))
@@ -260,7 +265,7 @@ fun ContinueCard(book: Book, onClick: () -> Unit) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Cover(book, Modifier.width(54.dp), corner = 4.dp, small = true)
             Column(Modifier.weight(1f).padding(start = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("继续阅读", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.lib_continue_reading), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 Text(book.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 val chapter = remember(book.locator) {
                     book.locator?.let { runCatching { org.json.JSONObject(it).optString("title") }.getOrNull() }?.takeIf { it.isNotBlank() }
@@ -272,8 +277,8 @@ fun ContinueCard(book: Book, onClick: () -> Unit) {
                     Progress(book.progress, Modifier.width(120.dp))
                     Text(
                         when {
-                            book.finished -> "已读完"
-                            book.progress <= 0f -> "刚开始"
+                            book.finished -> stringResource(R.string.status_finished)
+                            book.progress <= 0f -> stringResource(R.string.lib_just_started)
                             else -> percent(book.progress)
                         },
                         Modifier.padding(start = 8.dp),

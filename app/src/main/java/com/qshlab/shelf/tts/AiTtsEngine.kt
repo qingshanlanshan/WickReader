@@ -1,11 +1,13 @@
 package com.qshlab.shelf.tts
 
+import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import com.k2fsa.sherpa.onnx.GenerationConfig
+import com.qshlab.shelf.R
 import com.qshlab.shelf.chinese.ChineseConverter
 import java.util.concurrent.Executors
 import kotlinx.coroutines.CancellationException
@@ -73,8 +75,10 @@ data class AiVoice(val id: AiVoiceId, val name: String, override val language: L
 sealed class AiTtsError(override val message: String) : TtsEngine.Error {
     override val cause: Error? = null
 
-    class NoVoice(language: String?) : AiTtsError("没有可读${language ?: "这种语言"}的 AI 语音")
-    class Synthesis(detail: String?) : AiTtsError("AI 语音合成失败：${detail ?: "未知错误"}")
+    class NoVoice(context: Context, language: String?) :
+        AiTtsError(context.getString(R.string.tts_no_voice, language ?: context.getString(R.string.tts_this_language)))
+    class Synthesis(context: Context, detail: String?) :
+        AiTtsError(context.getString(R.string.tts_synthesis_failed, detail ?: context.getString(R.string.tts_unknown_error)))
 }
 
 /**
@@ -114,7 +118,7 @@ class AiTtsEngine(
 
     override val voices: Set<AiVoice>
         get() = VoiceCatalog.models.filter { it.id in manager.installed.value }.flatMap { m ->
-            m.speakers.map { s -> AiVoice(AiVoiceId(m.id, s.sid), s.name, Language(s.language)) }
+            m.speakers.map { s -> AiVoice(AiVoiceId(m.id, s.sid), s.displayName(manager.context), Language(s.language)) }
         }.toSet()
 
     private var listener: TtsEngine.Listener<AiTtsError>? = null
@@ -138,7 +142,7 @@ class AiTtsEngine(
 
     /** Loads the model for the book's language before the first sentence. */
     suspend fun preload() {
-        val (model, _) = pick(bookLanguage) ?: throw IllegalStateException(AiTtsError.NoVoice(bookLanguage).message)
+        val (model, _) = pick(bookLanguage) ?: throw IllegalStateException(AiTtsError.NoVoice(manager.context, bookLanguage).message)
         manager.load(model)
     }
 
@@ -186,7 +190,7 @@ class AiTtsEngine(
                 continue
             }
             val result = runCatching {
-                val (model, sid) = job.voice ?: throw IllegalStateException(AiTtsError.NoVoice(job.lang).message)
+                val (model, sid) = job.voice ?: throw IllegalStateException(AiTtsError.NoVoice(manager.context, job.lang).message)
                 val tts = manager.load(model)
                 val started = System.nanoTime()
                 val parts = splitLong(job.spoken).map { tts.generateWithConfig(it, GenerationConfig(sid = sid, speed = job.speed)) }
@@ -272,7 +276,7 @@ class AiTtsEngine(
             return
         }
         if (job.voice == null) {
-            notify { onError(requestId, AiTtsError.NoVoice(job.lang)) }
+            notify { onError(requestId, AiTtsError.NoVoice(manager.context, job.lang)) }
             return
         }
         current = scope.launch {
@@ -290,7 +294,7 @@ class AiTtsEngine(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                notify { onError(requestId, AiTtsError.Synthesis(e.message)) }
+                notify { onError(requestId, AiTtsError.Synthesis(manager.context, e.message)) }
             }
         }
     }
@@ -456,7 +460,7 @@ class AiTtsEngineProvider(
             Try.success(engine)
         } catch (e: Throwable) {
             engine.close()
-            Try.failure(DebugError(e.message ?: "无法加载 AI 语音"))
+            Try.failure(DebugError(e.message ?: manager.context.getString(R.string.tts_load_failed)))
         }
     }
 

@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -176,12 +177,12 @@ class PdfReaderActivity : FragmentActivity() {
             AnimatedVisibility(overlayVisible, enter = slideInVertically { -it } + fadeIn(), exit = slideOutVertically { -it } + fadeOut()) {
                 Surface(tonalElevation = 3.dp, shadowElevation = 4.dp) {
                     Row(Modifier.fillMaxWidth().statusBarsPadding().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { finish() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") }
+                        IconButton(onClick = { finish() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.rd_back)) }
                         Text(session.book.title, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
                         val marked = currentBookmarks().isNotEmpty()
-                        IconButton(onClick = ::toggleBookmark) { Icon(if (marked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, if (marked) "删除书签" else "添加书签") }
-                        IconButton(onClick = { sheet = "toc" }) { Icon(Icons.AutoMirrored.Filled.List, "目录") }
-                        IconButton(onClick = { sheet = "settings" }) { Icon(Icons.Filled.Tune, "显示设置") }
+                        IconButton(onClick = ::toggleBookmark) { Icon(if (marked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, stringResource(if (marked) R.string.rd_bookmark_remove else R.string.rd_bookmark_add)) }
+                        IconButton(onClick = { sheet = "toc" }) { Icon(Icons.AutoMirrored.Filled.List, stringResource(R.string.rd_contents)) }
+                        IconButton(onClick = { sheet = "settings" }) { Icon(Icons.Filled.Tune, stringResource(R.string.rd_display_settings)) }
                     }
                 }
             }
@@ -227,17 +228,17 @@ class PdfReaderActivity : FragmentActivity() {
         if (sheet == "settings") {
             ModalBottomSheet(onDismissRequest = { sheet = null }) {
                 Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("翻页方式", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.rd_pdf_page_turn), style = MaterialTheme.typography.labelLarge)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(!settings.pdfScroll, { update(settings.copy(pdfScroll = false)) }, label = { Text("一页一页翻") })
-                        FilterChip(settings.pdfScroll, { update(settings.copy(pdfScroll = true)) }, label = { Text("上下滚动") })
+                        FilterChip(!settings.pdfScroll, { update(settings.copy(pdfScroll = false)) }, label = { Text(stringResource(R.string.rd_pdf_paged)) })
+                        FilterChip(settings.pdfScroll, { update(settings.copy(pdfScroll = true)) }, label = { Text(stringResource(R.string.rd_pdf_scroll)) })
                     }
-                    Text("页面大小", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.rd_pdf_page_size), style = MaterialTheme.typography.labelLarge)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(settings.pdfFitWidth, { update(settings.copy(pdfFitWidth = true)) }, label = { Text("适应宽度") })
-                        FilterChip(!settings.pdfFitWidth, { update(settings.copy(pdfFitWidth = false)) }, label = { Text("整页") })
+                        FilterChip(settings.pdfFitWidth, { update(settings.copy(pdfFitWidth = true)) }, label = { Text(stringResource(R.string.rd_pdf_fit_width)) })
+                        FilterChip(!settings.pdfFitWidth, { update(settings.copy(pdfFitWidth = false)) }, label = { Text(stringResource(R.string.rd_pdf_fit_page)) })
                     }
-                    Text("双指可以放大；PDF 不支持改字体、繁简转换和朗读。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.rd_pdf_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -260,7 +261,7 @@ class PdfReaderActivity : FragmentActivity() {
         lifecycleScope.launch {
             if (existing.isNotEmpty()) {
                 existing.forEach { shelfApp.annotations.delete(it.id) }
-                Toast.makeText(this@PdfReaderActivity, "已删除书签", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@PdfReaderActivity, getString(R.string.rd_bookmark_removed), Toast.LENGTH_SHORT).show()
                 return@launch
             }
             val here = navigator.currentLocator.value
@@ -269,13 +270,13 @@ class PdfReaderActivity : FragmentActivity() {
                     bookId = bookId,
                     type = AnnotationType.BOOKMARK,
                     locator = here.toJSON().toString(),
-                    text = "第 ${here.locations.position ?: "?"} 页",
+                    text = getString(R.string.rd_pdf_bookmark_text, (here.locations.position ?: "?").toString()),
                     chapter = here.title,
                     progress = (here.locations.totalProgression ?: 0.0).toFloat(),
                     createdAt = System.currentTimeMillis(),
                 )
             )
-            Toast.makeText(this@PdfReaderActivity, "已添加书签", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this@PdfReaderActivity, getString(R.string.rd_bookmark_added), Toast.LENGTH_SHORT).show()
         }
     }
 

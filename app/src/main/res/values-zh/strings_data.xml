@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cat_gutenberg">Project Gutenberg（7 万多本公版书，含中文古典）</string>
+    <string name="cat_no_results">没有找到「%1$s」。古腾堡的书名多为英文或繁体中文，可以试试作者名、拼音或英文书名。</string>
+    <string name="cat_cannot_open">无法打开这个书库（请检查网络或地址）</string>
+    <string name="cat_not_opds">这个地址不是 OPDS 书库</string>
+    <string name="cat_chinese_books">中文书</string>
+    <string name="cat_japanese_books">日文书</string>
+    <string name="cat_epub_images">EPUB（含插图）</string>
+    <string name="cat_pdf">PDF</string>
+    <string name="cat_kindle_unsupported">Kindle（暂不支持）</string>
+    <string name="cat_file">文件</string>
+    <string name="cat_download_failed_http">下载失败（HTTP %1$d）</string>
+    <string name="cat_too_many_redirects">重定向次数过多</string>
+    <string name="cat_title">在线书库</string>
+    <string name="cat_add">添加书库</string>
+    <string name="cat_explain">OPDS 是电子书目录的开放标准。可以添加任何 OPDS 地址，比如自己的 Calibre / calibre-web 书库。</string>
+    <string name="cat_add_title">添加 OPDS 书库</string>
+    <string name="cat_name">名称</string>
+    <string name="cat_url">OPDS 地址</string>
+    <string name="cat_search_title">搜索：%1$s</string>
+    <string name="cat_search_hint">搜索书名或作者（中文、英文都可以）</string>
+    <string name="cat_next_page">下一页 ›</string>
+    <string name="cat_empty">这里没有内容</string>
+    <string name="cat_downloading">正在下载《%1$s》…</string>
+    <string name="cat_added">已加入书架：《%1$s》</string>
+    <string name="cat_not_added">没有加入：%1$s</string>
+    <string name="cat_download_failed">下载失败：%1$s</string>
+    <string name="cat_untitled">（无标题）</string>
+    <string name="cat_no_files">这本书没有可下载的文件</string>
+    <string name="cat_download_format">下载 %1$s</string>
+    <string name="common_back">返回</string>
+    <string name="common_delete">删除</string>
+    <string name="common_add">添加</string>
+    <string name="common_cancel">取消</string>
+    <string name="imp_already">已在书架中</string>
+    <string name="imp_cannot_read">无法读取文件</string>
+    <string name="imp_unsupported_ebook">暂不支持 .%1$s（可用 Calibre 转成 EPUB）</string>
+    <string name="imp_unsupported">暂不支持 .%1$s</string>
+    <string name="imp_cannot_parse">无法解析这个 %1$s</string>
+    <string name="imp_empty">文件是空的</string>
+    <string name="imp_broken">文件损坏或格式不支持</string>
+</resources>

@@ -24,6 +24,12 @@ private val Context.dataStore by preferencesDataStore(name = "settings")
 
 /** Holds the app-wide singletons (no DI framework needed at this size). */
 class ShelfApp : Application() {
+    companion object {
+        /** For the few non-UI places that need localized text. */
+        lateinit var instance: ShelfApp
+            private set
+    }
+
     override fun attachBaseContext(base: android.content.Context) {
         super.attachBaseContext(com.qshlab.shelf.AppLocale.wrap(base))
     }
@@ -46,6 +52,7 @@ class ShelfApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         val httpClient = DefaultHttpClient()
         val assetRetriever = AssetRetriever(contentResolver, httpClient)
         val publicationOpener = PublicationOpener(
@@ -61,7 +68,7 @@ class ShelfApp : Application() {
         library = LibraryRepository(this, db.books(), assetRetriever, publicationOpener, annotations)
         settings = SettingsRepository(dataStore)
         catalogs = CatalogRepository(dataStore)
-        readers = ReaderRepository(library, settings)
+        readers = ReaderRepository(this, library, settings)
         voices = VoiceManager(this, appScope)
     }
 }

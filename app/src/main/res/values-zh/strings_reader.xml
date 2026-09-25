@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Reader: top bar and common actions -->
+    <string name="rd_back">返回</string>
+    <string name="rd_read_aloud">朗读</string>
+    <string name="rd_search">搜索</string>
+    <string name="rd_bookmark_add">添加书签</string>
+    <string name="rd_bookmark_remove">删除书签</string>
+    <string name="rd_contents">目录</string>
+    <string name="rd_reading_settings">阅读设置</string>
+    <string name="rd_display_settings">显示设置</string>
+    <string name="rd_close">关闭</string>
+    <string name="rd_page_progress">第 %1$d / %2$d 页 · %3$d%%</string>
+
+    <!-- Reader: text selection menu and toasts -->
+    <string name="rd_look_up">查词/翻译</string>
+    <string name="rd_highlight">高亮</string>
+    <string name="rd_note">笔记</string>
+    <string name="rd_copy">复制</string>
+    <string name="rd_copied">已复制</string>
+    <string name="rd_bookmark">书签</string>
+    <string name="rd_bookmark_added">已添加书签</string>
+    <string name="rd_bookmark_removed">已删除书签</string>
+
+    <!-- Reader: settings panel -->
+    <string name="rd_theme">主题</string>
+    <string name="rd_font_size">字号</string>
+    <string name="rd_font">字体</string>
+    <string name="rd_line_spacing">行距</string>
+    <string name="rd_margins">页边距</string>
+    <string name="rd_layout_this_book">版式（本书）</string>
+    <string name="rd_scroll">滚动阅读</string>
+    <string name="rd_publisher_styles">使用书籍自带排版</string>
+    <string name="rd_volume_keys">音量键翻页</string>
+    <string name="rd_chinese_conversion">繁简转换</string>
+    <string name="rd_book_simplified">本书显示为简体</string>
+    <string name="rd_book_simplified_detected">本书显示为简体（检测到繁体）</string>
+    <string name="rd_default_simplified">繁体书默认显示为简体</string>
+    <string name="rd_translate_book">整本翻译（离线）</string>
+    <string name="rd_decrease">减小</string>
+    <string name="rd_increase">增大</string>
+
+    <!-- Reader: contents / bookmarks / notes / search / highlight sheets -->
+    <string name="rd_tab_bookmarks">书签 %1$d</string>
+    <string name="rd_tab_notes">笔记 %1$d</string>
+    <string name="rd_no_toc">这本书没有目录</string>
+    <string name="rd_no_bookmarks">还没有书签。阅读时点顶部的书签按钮添加。</string>
+    <string name="rd_no_notes">还没有笔记。选中文字后点「高亮」或「笔记」。</string>
+    <string name="rd_delete">删除</string>
+    <string name="rd_search_hint">在书中搜索</string>
+    <string name="rd_search_none">没有找到</string>
+    <plurals name="rd_search_found">
+        <item quantity="other">找到 %1$d 处</item>
+    </plurals>
+    <string name="rd_search_found_limited">找到 %1$d 处（只显示前 300 处）</string>
+    <string name="rd_delete_highlight">删除高亮</string>
+    <string name="rd_save">保存</string>
+
+    <!-- Reader: PDF -->
+    <string name="rd_pdf_page_turn">翻页方式</string>
+    <string name="rd_pdf_paged">一页一页翻</string>
+    <string name="rd_pdf_scroll">上下滚动</string>
+    <string name="rd_pdf_page_size">页面大小</string>
+    <string name="rd_pdf_fit_width">适应宽度</string>
+    <string name="rd_pdf_fit_page">整页</string>
+    <string name="rd_pdf_hint">双指可以放大；PDF 不支持改字体、繁简转换和朗读。</string>
+    <string name="rd_pdf_bookmark_text">第 %1$s 页</string>
+
+    <!-- Reader: read aloud -->
+    <string name="rd_tts_loading_ai">正在加载 AI 语音…</string>
+    <string name="rd_tts_ai_failed">AI 语音加载失败，改用手机自带语音</string>
+    <string name="rd_tts_unsupported">这本书不支持朗读</string>
+    <string name="rd_tts_start_failed">无法启动朗读：%1$s</string>
+    <string name="rd_tts_slow">这台手机合成这个声音较慢，句子间可能会停顿。可以在「音色」里换成「标贝女声」。</string>
+    <string name="rd_tts_missing_data">手机缺少这种语言的语音数据，请在系统中下载</string>
+    <string name="rd_tts_error">朗读出错：%1$s</string>
+    <string name="rd_voice_ai">AI · %1$s · %2$s</string>
+    <string name="rd_voice_system">系统 · %1$s · %2$s</string>
+    <string name="rd_voice_needs_network">需联网</string>
+    <string name="rd_voice_quality_high">高质量</string>
+    <string name="rd_voice_quality_normal">普通</string>
+    <string name="rd_voice_quality_low">较低</string>
+    <string name="rd_voice_use_system">使用手机自带语音</string>
+    <string name="rd_voice_download">⬇ 下载更自然的 AI 语音…</string>
+    <string name="rd_voice_ai_unsupported">⬇ AI 语音暂不支持这种语言</string>
+    <string name="rd_choose_voice">选择音色</string>
+    <string name="rd_voice_help">「AI」开头的是离线 AI 语音（在设置里下载）；「系统」开头的是手机自带的语音引擎。</string>
+    <string name="rd_no_voices">没有可选的声音</string>
+    <string name="rd_tts_speed">朗读速度</string>
+    <string name="rd_speed_normal">%1$s（正常）</string>
+    <string name="rd_previous_sentence">上一句</string>
+    <string name="rd_next_sentence">下一句</string>
+    <string name="rd_play">播放</string>
+    <string name="rd_pause">暂停</string>
+    <string name="rd_stop_reading">停止朗读</string>
+
+    <!-- Reader: errors when opening a book -->
+    <string name="rd_err_book_missing">书不存在</string>
+    <string name="rd_err_file_missing">书籍文件丢失</string>
+    <string name="rd_err_pdf_open">无法打开这个 PDF</string>
+    <string name="rd_err_book_open">无法打开这本书</string>
+
+    <!-- Translation -->
+    <string name="tr_lang_ko">韩语</string>
+    <string name="tr_lang_fr">法语</string>
+    <string name="tr_lang_de">德语</string>
+    <string name="tr_lang_es">西班牙语</string>
+    <string name="tr_lang_ru">俄语</string>
+    <string name="tr_translate_from">%1$s 译成</string>
+    <string name="tr_translating">翻译中…</string>
+    <string name="tr_first_download">首次使用：正在下载%1$s→%2$s翻译模型（约 30 MB，只需一次）…</string>
+    <string name="tr_failed">翻译失败：%1$s</string>
+    <string name="tr_failed_hint">请检查网络后重试（首次需下载模型）</string>
+    <string name="tr_bing_dict">必应词典</string>
+    <string name="tr_apps_hint">提示：安装词典或翻译 App（如欧路词典、Google 翻译）后，会出现在这里。</string>
+    <string name="tr_downloading_models">正在下载翻译模型（每种语言约 30 MB，只需一次）…</string>
+    <string name="tr_download_failed">模型下载失败，请联网后重试</string>
+</resources>

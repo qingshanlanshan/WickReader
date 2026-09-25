@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
+import androidx.annotation.StringRes
+import com.qshlab.shelf.R
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -13,17 +15,17 @@ import kotlinx.coroutines.withContext
 /** Walks shared storage for e-book files ("扫描手机"). */
 object BookScanner {
     /** A format choice in the scan, with the extensions it covers. */
-    data class Format(val key: String, val label: String, val extensions: Set<String>, val supported: Boolean = true)
+    data class Format(val key: String, @StringRes val label: Int, val extensions: Set<String>, val supported: Boolean = true)
 
     val FORMATS = listOf(
-        Format("epub", "EPUB", setOf("epub")),
-        Format("pdf", "PDF", setOf("pdf")),
-        Format("txt", "TXT", setOf("txt", "md")),
-        Format("fb2", "FB2", setOf("fb2")),
-        Format("docx", "Word", setOf("docx")),
-        Format("cbz", "漫画 CBZ", setOf("cbz")),
-        Format("html", "网页 HTML", setOf("html", "htm", "xhtml")),
-        Format("mobi", "MOBI / AZW3", setOf("mobi", "azw", "azw3", "prc"), supported = false),
+        Format("epub", R.string.set_format_epub, setOf("epub")),
+        Format("pdf", R.string.set_format_pdf, setOf("pdf")),
+        Format("txt", R.string.set_format_txt, setOf("txt", "md")),
+        Format("fb2", R.string.set_format_fb2, setOf("fb2")),
+        Format("docx", R.string.set_format_docx, setOf("docx")),
+        Format("cbz", R.string.set_format_cbz, setOf("cbz")),
+        Format("html", R.string.set_format_html, setOf("html", "htm", "xhtml")),
+        Format("mobi", R.string.set_format_mobi, setOf("mobi", "azw", "azw3", "prc"), supported = false),
     )
 
     val DEFAULT_FORMATS = FORMATS.map { it.key }.toSet() - "html"

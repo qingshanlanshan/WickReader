@@ -1,6 +1,7 @@
 package com.qshlab.shelf.tts
 
 import android.content.Context
+import com.qshlab.shelf.R
 import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.OfflineTtsConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsKokoroModelConfig
@@ -34,7 +35,7 @@ sealed interface DownloadState {
  * Downloads, unpacks and loads the neural voice models. Models live in filesDir/voices/<id>; a
  * model counts as installed once its ".ready" marker exists.
  */
-class VoiceManager(private val context: Context, private val scope: CoroutineScope) {
+class VoiceManager(val context: Context, private val scope: CoroutineScope) {
     private val root = File(context.filesDir, "voices").apply { mkdirs() }
 
     private val _installed = MutableStateFlow(scanInstalled())
@@ -87,7 +88,7 @@ class VoiceManager(private val context: Context, private val scope: CoroutineSco
                 }
                 val dest = dir(model.id)
                 dest.deleteRecursively()
-                check(tmp.renameTo(dest)) { "无法保存语音文件" }
+                check(tmp.renameTo(dest)) { context.getString(R.string.tts_save_failed) }
                 File(dest, ".ready").writeText("1")
                 _installed.update { it + model.id }
                 setState(model.id, null)
@@ -97,7 +98,7 @@ class VoiceManager(private val context: Context, private val scope: CoroutineSco
                 throw e
             } catch (e: Exception) {
                 part.delete(); tmp.deleteRecursively()
-                setState(model.id, DownloadState.Failed(e.message ?: "下载失败"))
+                setState(model.id, DownloadState.Failed(e.message ?: context.getString(R.string.tts_download_failed)))
             }
         }
     }
@@ -123,7 +124,7 @@ class VoiceManager(private val context: Context, private val scope: CoroutineSco
         conn.readTimeout = 60_000
         conn.setRequestProperty("User-Agent", "Shelf-Reader/0.2 (Android)")
         try {
-            if (conn.responseCode !in 200..299) throw IllegalStateException("下载失败（HTTP ${conn.responseCode}）")
+            if (conn.responseCode !in 200..299) throw IllegalStateException(context.getString(R.string.tts_download_failed_http, conn.responseCode))
             val total = conn.contentLengthLong
             var done = 0L
             var lastReport = 0L
@@ -143,7 +144,7 @@ class VoiceManager(private val context: Context, private val scope: CoroutineSco
                     }
                 }
             }
-            if (total > 0 && done != total) throw IllegalStateException("下载中断，请重试")
+            if (total > 0 && done != total) throw IllegalStateException(context.getString(R.string.tts_download_interrupted))
         } finally {
             conn.disconnect()
         }
@@ -160,7 +161,7 @@ class VoiceManager(private val context: Context, private val scope: CoroutineSco
             .filter { it.getString("type") == "file" }
             .map { it.getString("path") to it.optLong("size") }
             .filter { (path, _) -> !path.startsWith("dict/") && !path.startsWith(".") && path != "lexicon-gb-en.txt" && path != "README.md" }
-        check(files.any { it.first == model.modelFile }) { "镜像缺少模型文件" }
+        check(files.any { it.first == model.modelFile }) { context.getString(R.string.tts_mirror_missing_model) }
         val total = files.sumOf { it.second }.coerceAtLeast(1)
         val done = java.util.concurrent.atomic.AtomicLong()
         val queue = java.util.concurrent.ConcurrentLinkedQueue(files)
@@ -177,7 +178,7 @@ class VoiceManager(private val context: Context, private val scope: CoroutineSco
                             last = now
                         }
                         onProgress(done.addAndGet(size - last).toFloat() / total)
-                        check(target.length() == size) { "文件不完整：$path" }
+                        check(target.length() == size) { context.getString(R.string.tts_file_incomplete, path) }
                     }
                 }
             }
@@ -244,7 +245,7 @@ class VoiceManager(private val context: Context, private val scope: CoroutineSco
                 previewPlayer.awaitPendingBelow(0)
             }.exceptionOrNull()
             if (error is kotlinx.coroutines.CancellationException) throw error
-            withContext(Dispatchers.Main) { onDone(error?.let { it.message ?: "试听失败" }) }
+            withContext(Dispatchers.Main) { onDone(error?.let { it.message ?: context.getString(R.string.tts_preview_failed) }) }
         }
     }
 

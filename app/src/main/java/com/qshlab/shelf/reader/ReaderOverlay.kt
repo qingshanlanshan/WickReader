@@ -80,6 +80,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.qshlab.shelf.R
 import com.qshlab.shelf.data.Annotation
 import com.qshlab.shelf.settings.ReaderFont
 import com.qshlab.shelf.settings.ReaderSettings
@@ -152,15 +153,15 @@ fun ReaderOverlay(
                         Modifier.fillMaxWidth().statusBarsPadding().height(56.dp).padding(horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") }
+                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.rd_back)) }
                         Text(title, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
-                        IconButton(onClick = onReadAloud) { Icon(Icons.Filled.Headphones, "朗读") }
-                        IconButton(onClick = { sheet = "search" }) { Icon(Icons.Filled.Search, "搜索") }
+                        IconButton(onClick = onReadAloud) { Icon(Icons.Filled.Headphones, stringResource(R.string.rd_read_aloud)) }
+                        IconButton(onClick = { sheet = "search" }) { Icon(Icons.Filled.Search, stringResource(R.string.rd_search)) }
                         IconButton(onClick = onToggleBookmark) {
-                            Icon(if (bookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, if (bookmarked) "删除书签" else "添加书签")
+                            Icon(if (bookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, stringResource(if (bookmarked) R.string.rd_bookmark_remove else R.string.rd_bookmark_add))
                         }
-                        IconButton(onClick = { sheet = "toc" }) { Icon(Icons.AutoMirrored.Filled.List, "目录") }
-                        IconButton(onClick = { onSettingsOpenChange(true) }) { Icon(Icons.Filled.TextFields, "阅读设置") }
+                        IconButton(onClick = { sheet = "toc" }) { Icon(Icons.AutoMirrored.Filled.List, stringResource(R.string.rd_contents)) }
+                        IconButton(onClick = { onSettingsOpenChange(true) }) { Icon(Icons.Filled.TextFields, stringResource(R.string.rd_reading_settings)) }
                     }
                 }
             }
@@ -179,9 +180,13 @@ fun ReaderOverlay(
                             Text(locator?.title ?: "", Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
                             val page = if (pageCount != null && pageCount > 0) {
                                 val p = dragging?.let { (it * (pageCount - 1)).roundToInt() + 1 } ?: locator?.locations?.position
-                                p?.let { "第 ${it.coerceIn(1, pageCount)} / $pageCount 页 · " }
+                                p?.coerceIn(1, pageCount)
                             } else null
-                            Text((page ?: "") + "${((dragging ?: progress) * 100).roundToInt()}%", style = MaterialTheme.typography.bodySmall)
+                            val percent = ((dragging ?: progress) * 100).roundToInt()
+                            Text(
+                                if (page != null && pageCount != null) stringResource(R.string.rd_page_progress, page, pageCount, percent) else "$percent%",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                         }
                         // With the next page on the left, the book runs right-to-left along the slider too.
                         CompositionLocalProvider(LocalLayoutDirection provides if (layout == PageLayout.HORIZONTAL_LTR) LayoutDirection.Ltr else LayoutDirection.Rtl) {
@@ -262,11 +267,11 @@ private fun ReaderSettingsPanel(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("阅读设置", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-            IconButton(onClick = onClose) { Icon(Icons.Filled.Close, "关闭") }
+            Text(stringResource(R.string.rd_reading_settings), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            IconButton(onClick = onClose) { Icon(Icons.Filled.Close, stringResource(R.string.rd_close)) }
         }
 
-        Label("主题")
+        Label(stringResource(R.string.rd_theme))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ReaderTheme.entries.forEach { t ->
                 val selected = s.theme == t
@@ -281,19 +286,19 @@ private fun ReaderSettingsPanel(
             }
         }
 
-        Stepper("字号", s.fontSize, 0.6..2.5, 0.1, { "${(it * 100).roundToInt()}%" }) { onChange(s.copy(fontSize = it)) }
+        Stepper(stringResource(R.string.rd_font_size), s.fontSize, 0.6..2.5, 0.1, { "${(it * 100).roundToInt()}%" }) { onChange(s.copy(fontSize = it)) }
 
-        Label("字体")
+        Label(stringResource(R.string.rd_font))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ReaderFont.entries.forEach { f ->
                 FilterChip(selected = s.font == f, onClick = { onChange(s.copy(font = f)) }, label = { Text(stringResource(f.label)) })
             }
         }
 
-        Stepper("行距", s.lineHeight, 1.0..2.4, 0.1, { "%.1f".format(it) }, enabled = !s.publisherStyles) { onChange(s.copy(lineHeight = it)) }
-        Stepper("页边距", s.pageMargins, 0.2..2.5, 0.1, { "%.1f".format(it) }, enabled = !s.publisherStyles) { onChange(s.copy(pageMargins = it)) }
+        Stepper(stringResource(R.string.rd_line_spacing), s.lineHeight, 1.0..2.4, 0.1, { "%.1f".format(it) }, enabled = !s.publisherStyles) { onChange(s.copy(lineHeight = it)) }
+        Stepper(stringResource(R.string.rd_margins), s.pageMargins, 0.2..2.5, 0.1, { "%.1f".format(it) }, enabled = !s.publisherStyles) { onChange(s.copy(pageMargins = it)) }
 
-        if (layoutChoices.size > 1) Label("版式（本书）")
+        if (layoutChoices.size > 1) Label(stringResource(R.string.rd_layout_this_book))
         if (layoutChoices.size > 1) layoutChoices.forEach { l ->
             Row(Modifier.fillMaxWidth().clickable { if (l != layout) onLayoutChange(l) }.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(selected = l == layout, onClick = { if (l != layout) onLayoutChange(l) })
@@ -302,19 +307,19 @@ private fun ReaderSettingsPanel(
         }
 
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
-        SwitchRow("滚动阅读", s.scroll) { onChange(s.copy(scroll = it)) }
-        SwitchRow("使用书籍自带排版", s.publisherStyles) { onChange(s.copy(publisherStyles = it)) }
-        SwitchRow("音量键翻页", s.volumeKeysTurnPages) { onChange(s.copy(volumeKeysTurnPages = it)) }
+        SwitchRow(stringResource(R.string.rd_scroll), s.scroll) { onChange(s.copy(scroll = it)) }
+        SwitchRow(stringResource(R.string.rd_publisher_styles), s.publisherStyles) { onChange(s.copy(publisherStyles = it)) }
+        SwitchRow(stringResource(R.string.rd_volume_keys), s.volumeKeysTurnPages) { onChange(s.copy(volumeKeysTurnPages = it)) }
 
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
-        Label("繁简转换")
-        SwitchRow(if (isTraditional) "本书显示为简体（检测到繁体）" else "本书显示为简体", bookSimplified) { onBookSimplifiedChange(it) }
-        SwitchRow("繁体书默认显示为简体", s.toSimplified) { onChange(s.copy(toSimplified = it)) }
+        Label(stringResource(R.string.rd_chinese_conversion))
+        SwitchRow(stringResource(if (isTraditional) R.string.rd_book_simplified_detected else R.string.rd_book_simplified), bookSimplified) { onBookSimplifiedChange(it) }
+        SwitchRow(stringResource(R.string.rd_default_simplified), s.toSimplified) { onChange(s.copy(toSimplified = it)) }
 
-        Label("整本翻译（离线）")
+        Label(stringResource(R.string.rd_translate_book))
         val (from, to) = translationPair
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.Center) {
-            Text("${Translation.nameOf(from)} 译成", Modifier.align(Alignment.CenterVertically).padding(end = 2.dp), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.tr_translate_from, Translation.nameOf(from)), Modifier.align(Alignment.CenterVertically).padding(end = 2.dp), style = MaterialTheme.typography.bodyMedium)
             Translation.TARGETS.filter { it != from }.forEach { lang ->
                 FilterChip(selected = to == lang, onClick = { if (lang != to) onTranslationTargetChange(lang) }, label = { Text(Translation.nameOf(lang)) })
             }
@@ -342,9 +347,9 @@ private fun Stepper(
     Column(Modifier.padding(top = 6.dp)) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            FilledTonalIconButton(onClick = { onChange(snap(value - step)) }, enabled = enabled && value > range.start + 1e-6) { Icon(Icons.Filled.Remove, "减小") }
+            FilledTonalIconButton(onClick = { onChange(snap(value - step)) }, enabled = enabled && value > range.start + 1e-6) { Icon(Icons.Filled.Remove, stringResource(R.string.rd_decrease)) }
             Text(format(value), Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.titleSmall)
-            FilledTonalIconButton(onClick = { onChange(snap(value + step)) }, enabled = enabled && value < range.endInclusive - 1e-6) { Icon(Icons.Filled.Add, "增大") }
+            FilledTonalIconButton(onClick = { onChange(snap(value + step)) }, enabled = enabled && value < range.endInclusive - 1e-6) { Icon(Icons.Filled.Add, stringResource(R.string.rd_increase)) }
         }
     }
 }

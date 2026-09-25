@@ -62,6 +62,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import androidx.compose.ui.res.stringResource
+import com.qshlab.shelf.R
 import com.qshlab.shelf.data.ImportResult
 import com.qshlab.shelf.shelfApp
 import java.io.File
@@ -73,7 +75,7 @@ import org.readium.r2.shared.publication.opds.images
 /** List of OPDS catalogs, with add / remove. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CatalogsScreen(onBack: () -> Unit, onOpen: (Catalog) -> Unit) {
+fun CatalogsScreen(onBack: () -> Unit, onOpen: (name: String, url: String) -> Unit) {
     val repo = LocalContext.current.shelfApp.catalogs
     val catalogs by repo.catalogs.collectAsState(initial = repo.builtIn)
     val scope = rememberCoroutineScope()
@@ -82,30 +84,31 @@ fun CatalogsScreen(onBack: () -> Unit, onOpen: (Catalog) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
-                title = { Text("在线书库") },
-                actions = { IconButton(onClick = { adding = true }) { Icon(Icons.Filled.Add, "添加书库") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) } },
+                title = { Text(stringResource(R.string.cat_title)) },
+                actions = { IconButton(onClick = { adding = true }) { Icon(Icons.Filled.Add, stringResource(R.string.cat_add)) } },
             )
         },
     ) { padding ->
         LazyColumn(Modifier.padding(padding).fillMaxSize()) {
             item {
                 Text(
-                    "OPDS 是电子书目录的开放标准。可以添加任何 OPDS 地址，比如自己的 Calibre / calibre-web 书库。",
+                    stringResource(R.string.cat_explain),
                     Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             items(catalogs, key = { it.url }) { c ->
+                val name = c.nameRes?.let { stringResource(it) } ?: c.name
                 ListItem(
-                    headlineContent = { Text(c.name) },
+                    headlineContent = { Text(name) },
                     supportingContent = { Text(c.url, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     trailingContent = {
-                        if (!c.builtIn) IconButton(onClick = { scope.launch { repo.remove(c.url) } }) { Icon(Icons.Filled.Delete, "删除") }
+                        if (!c.builtIn) IconButton(onClick = { scope.launch { repo.remove(c.url) } }) { Icon(Icons.Filled.Delete, stringResource(R.string.common_delete)) }
                         else Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                     },
-                    modifier = Modifier.clickable { onOpen(c) },
+                    modifier = Modifier.clickable { onOpen(name, c.url) },
                 )
                 HorizontalDivider()
             }
@@ -117,20 +120,20 @@ fun CatalogsScreen(onBack: () -> Unit, onOpen: (Catalog) -> Unit) {
         var url by remember { mutableStateOf("https://") }
         AlertDialog(
             onDismissRequest = { adding = false },
-            title = { Text("添加 OPDS 书库") },
+            title = { Text(stringResource(R.string.cat_add_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(name, { name = it }, label = { Text("名称") }, singleLine = true)
-                    OutlinedTextField(url, { url = it }, label = { Text("OPDS 地址") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
+                    OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.cat_name)) }, singleLine = true)
+                    OutlinedTextField(url, { url = it }, label = { Text(stringResource(R.string.cat_url)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
                 }
             },
             confirmButton = {
                 Button(enabled = url.startsWith("http") && url.length > 10, onClick = {
                     scope.launch { repo.add(name.ifBlank { url }, url) }
                     adding = false
-                }) { Text("添加") }
+                }) { Text(stringResource(R.string.common_add)) }
             },
-            dismissButton = { TextButton(onClick = { adding = false }) { Text("取消") } },
+            dismissButton = { TextButton(onClick = { adding = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }
@@ -151,7 +154,7 @@ fun FeedScreen(title: String, url: String, onBack: () -> Unit, onOpenFeed: (titl
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) } },
                 title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             )
         },
@@ -163,12 +166,12 @@ fun FeedScreen(title: String, url: String, onBack: () -> Unit, onOpenFeed: (titl
                 is FeedResult.Loaded -> LazyColumn(contentPadding = PaddingValues(bottom = 32.dp)) {
                     if (r.searchTemplate != null) item {
                         val search = {
-                            if (query.isNotBlank()) onOpenFeed("搜索：${query.trim()}", Opds.searchUrl(context, r.searchTemplate, query.trim()))
+                            if (query.isNotBlank()) onOpenFeed(context.getString(R.string.cat_search_title, query.trim()), Opds.searchUrl(context, r.searchTemplate, query.trim()))
                         }
                         OutlinedTextField(
                             value = query,
                             onValueChange = { query = it },
-                            placeholder = { Text("搜索书名或作者（中文、英文都可以）") },
+                            placeholder = { Text(stringResource(R.string.cat_search_hint)) },
                             singleLine = true,
                             leadingIcon = { Icon(Icons.Filled.Search, null) },
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -197,10 +200,10 @@ fun FeedScreen(title: String, url: String, onBack: () -> Unit, onOpenFeed: (titl
                     // "Next page" link, if the feed is paginated.
                     feed.links.firstOrNull { "next" in it.rels }?.let { next ->
                         item {
-                            TextButton(onClick = { Opds.resolve(next, feed.href)?.let { onOpenFeed(title, it) } }, modifier = Modifier.fillMaxWidth()) { Text("下一页 ›") }
+                            TextButton(onClick = { Opds.resolve(next, feed.href)?.let { onOpenFeed(title, it) } }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.cat_next_page)) }
                         }
                     }
-                    if (folders.isEmpty() && pubs.isEmpty()) item { Text("这里没有内容", Modifier.padding(24.dp)) }
+                    if (folders.isEmpty() && pubs.isEmpty()) item { Text(stringResource(R.string.cat_empty), Modifier.padding(24.dp)) }
                 }
             }
         }
@@ -213,16 +216,20 @@ fun FeedScreen(title: String, url: String, onBack: () -> Unit, onOpenFeed: (titl
             baseUrl = (result as? FeedResult.Loaded)?.feed?.href,
             onDownload = { link, linkUrl ->
                 scope.launch {
-                    snackbar.showSnackbar("正在下载《${pub.metadata.title}》…")
+                    snackbar.showSnackbar(context.getString(R.string.cat_downloading, pub.metadata.title ?: ""))
                     val app = context.shelfApp
-                    val name = (pub.metadata.title ?: "book").replace(Regex("[\\\\/:*?\"<>|]"), "_") + (if (Opds.isEpub(link)) ".epub" else ".txt")
+                    val name = (pub.metadata.title ?: "book").replace(Regex("[\\\\/:*?\"<>|]"), "_") + when {
+                        Opds.isEpub(link) -> ".epub"
+                        Opds.isPdf(link) -> ".pdf"
+                        else -> ".txt"
+                    }
                     val msg = runCatching {
-                        val file = Opds.download(linkUrl, File(context.cacheDir, "downloads"), name)
+                        val file = Opds.download(context, linkUrl, File(context.cacheDir, "downloads"), name)
                         when (val res = app.library.importDownloaded(file, name)) {
-                            is ImportResult.Added -> "已加入书架：《${res.book.title}》"
-                            is ImportResult.Skipped -> "没有加入：${res.reason}"
+                            is ImportResult.Added -> context.getString(R.string.cat_added, res.book.title)
+                            is ImportResult.Skipped -> context.getString(R.string.cat_not_added, res.reason)
                         }
-                    }.getOrElse { "下载失败：${it.message}" }
+                    }.getOrElse { context.getString(R.string.cat_download_failed, it.message ?: "") }
                     selected = null
                     snackbar.showSnackbar(msg)
                 }
@@ -241,7 +248,7 @@ private fun PublicationRow(pub: Publication, base: org.readium.r2.shared.util.Ur
             if (cover != null) AsyncImage(cover, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         }
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text(pub.metadata.title ?: "（无标题）", style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(pub.metadata.title ?: stringResource(R.string.cat_untitled), style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(pub.metadata.authors.joinToString("、") { it.name }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         }
     }
@@ -258,14 +265,14 @@ private fun PublicationSheet(pub: Publication, baseUrl: org.readium.r2.shared.ut
             pub.metadata.description?.let {
                 Text(it.replace(Regex("<[^>]*>"), ""), Modifier.heightIn(max = 180.dp).verticalScroll(rememberScrollState()), style = MaterialTheme.typography.bodySmall)
             }
-            val links = Opds.acquisitions(pub).sortedByDescending { Opds.isEpub(it) }
-            if (links.isEmpty()) Text("这本书没有可下载的文件")
+            val links = Opds.acquisitions(pub).sortedWith(compareByDescending<Link> { Opds.isEpub(it) }.thenByDescending { Opds.isPdf(it) })
+            if (links.isEmpty()) Text(stringResource(R.string.cat_no_files))
             links.forEach { link ->
-                val supported = Opds.isEpub(link) || link.mediaType?.toString()?.startsWith("text/plain") == true
+                val supported = Opds.isEpub(link) || Opds.isPdf(link) || link.mediaType?.toString()?.startsWith("text/plain") == true
                 val url = baseUrl?.let { Opds.resolve(link, it) } ?: link.href.toString()
                 OutlinedButton(enabled = supported && !busy, onClick = { busy = true; onDownload(link, url) }, modifier = Modifier.fillMaxWidth()) {
                     if (busy && supported) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                    else Text("下载 ${Opds.label(link)}")
+                    else Text(stringResource(R.string.cat_download_format, Opds.label(LocalContext.current, link)))
                 }
             }
         }
