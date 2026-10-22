@@ -1,5 +1,5 @@
 // Cloudflare Workers config: static files from public/ plus a small Worker (worker.js) for
-// POST /api/feedback. Published from this Mac with ./deploy.sh (the APK is not kept in git).
+// POST /api/feedback. Published with ./deploy.sh (the APK is not kept in git).
 {
   "name": "wickreader",
   "main": "worker.js",
@@ -9,7 +9,7 @@
     "binding": "ASSETS",
   },
   // Feedback is emailed through Cloudflare Email Routing on qshlab.com; the destination must be a
-  // verified address there.
+  // verified address there. FEEDBACK_TO_ADDRESS is filled in by deploy.sh from feedback-to.txt (not in git).
   "send_email": [{ "name": "FEEDBACK", "destination_address": "FEEDBACK_TO_ADDRESS" }],
   "vars": {
     "FEEDBACK_FROM": "feedback@qshlab.com",

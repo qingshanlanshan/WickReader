@@ -1,7 +1,16 @@
 # WickReader 青灯
 
-A personal Android e-book reader (package `com.qshlab.shelf`, kept from the working name "Shelf" so updates install over earlier builds) in the spirit of ReadEra: a tidy modern bookshelf, series
-grouping, 繁→简, read-aloud, translation. Everything runs on the phone; there is no server.
+An e-book reader for Android with a tidy bookshelf, automatic series, 繁→简 conversion, on-device AI
+read-aloud and translation. Everything runs on the phone: no account, no server, no tracking.
+
+一个安卓电子书阅读器：整洁的书架、自动归类系列、繁体转简体、本地 AI 朗读与翻译。全部在手机上运行，无需账号，没有服务器。
+
+**Download: <https://wick.qshlab.com>** (Android 8+, English and 中文). The app updates itself from there.
+
+<p>
+  <img src="site/public/img-lib_en.webp" width="280" alt="Bookshelf">
+  <img src="site/public/img-panel_en.webp" width="280" alt="Reading settings">
+</p>
 
 ## Features
 
@@ -48,22 +57,22 @@ listed by the scan but not opened yet
   with Readium's tokenizer), so there are no gaps or mid-sentence stalls once reading has started.
   Sentence highlighting, speed 0.5×–3×, voice choice with preview, screen-off playback, lock-screen controls
 
-## Install on your phone
+## Install
 
-1. Copy `app/build/outputs/apk/release/app-release.apk` to the phone (AirDrop-style apps, WeChat file
-   transfer to yourself, USB, or a cloud drive).
-2. Open it on the phone; allow "install unknown apps" for the app you opened it from when asked.
-3. Or with USB debugging on: `adb install -r app/build/outputs/apk/release/app-release.apk`.
+Download the APK from <https://wick.qshlab.com> on the phone and open it; allow "install unknown apps"
+for your browser when Android asks. Or build it yourself (below) and `adb install -r` the APK.
 
 Translation downloads each language model (~30 MB) the first time it's used, and needs Google Play
 services (standard on phones sold outside mainland China).
 
-## Download page
+## Download page and feedback
 
-`site/` is the page at https://wick.qshlab.com (Cloudflare Workers static assets, no build step).
-Publish a release with `./gradlew assembleRelease && site/deploy.sh`: it copies the APK in (not kept in
-git), writes `version.json` and the `/download` redirect, and deploys. One-time setup on this Mac:
-`cd site && npm_config_cache=.npm-cache npx wrangler@3 login`.
+`site/` is the page at https://wick.qshlab.com: Cloudflare Workers static assets, plus `site/worker.js`,
+which emails messages from the in-app feedback form (and the 何切道场 site's) through Cloudflare Email
+Routing and keeps nothing. Publish a release with `./gradlew assembleRelease && site/deploy.sh`: it copies
+the APK in (not kept in git), writes `version.json` (the in-app update check) and the `/download`
+redirect, and deploys. It needs a one-time `cd site && npx wrangler@3 login`, and the feedback destination
+address in `site/feedback-to.txt` (not in git).
 
 ## Build
 
@@ -74,11 +83,12 @@ cd reader-android
 python3 tools/make_test_books.py /tmp/books   # sample EPUBs: series cases, Japanese vertical, heavy CSS
 ```
 
-Needs JDK 17 and the Android SDK (platform 37). `gradle.properties` bypasses a local proxy set in
-`~/.gradle/gradle.properties`; remove those two lines if you need that proxy.
+Needs JDK 17 and the Android SDK (platform 37). `gradle.properties` turns off any proxy set in
+`~/.gradle/gradle.properties`; remove those two lines if you need one.
 
-**Signing key**: `keystore/shelf-release.jks` + `keystore.properties` are gitignored. Back them up:
-Android only installs updates signed with the same key (otherwise uninstall first, losing the library).
+**Signing key**: `keystore/shelf-release.jks` + `keystore.properties` are not in git. Without them the
+build is debug-signed, which is fine for your own use. (Android only installs an update signed with the
+same key as the installed app.)
 
 Quick testing without the file picker: `adb push book.epub /sdcard/Android/data/com.qshlab.shelf/files/inbox/`
 and reopen the app; files there are imported on launch.
@@ -101,3 +111,9 @@ and reopen the app; files there are imported on launch.
 - MOBI / AZW3, DJVU, CBR
 - AI voices for Japanese and other languages (they use the phone's TTS engine)
 - Reading statistics, cloud sync, backup / restore
+
+## Credits
+
+[Readium](https://github.com/readium/kotlin-toolkit) (BSD-3), [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)
+(Apache 2.0) with the Kokoro, Matcha (标贝) and Piper voices, [OpenCC](https://github.com/BYVoid/OpenCC)
+dictionaries (Apache 2.0), [ML Kit](https://developers.google.com/ml-kit) translation, pdfium.

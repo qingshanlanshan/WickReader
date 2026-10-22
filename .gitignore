@@ -15,3 +15,6 @@ site/public/version.json
 site/public/_redirects
 site/.wrangler/
 site/.npm-cache/
+site/node_modules/
+site/feedback-to.txt
+site/.deploy.jsonc

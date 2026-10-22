@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Publishes the download page and the latest release APK to https://wick.qshlab.com.
 #   cd reader-android && ./gradlew assembleRelease && site/deploy.sh
-# Needs a one-time `npx wrangler@3 login` on this Mac.
+# Needs a one-time `npx wrangler@3 login`.
 set -euo pipefail
 cd "$(dirname "$0")"
-if grep -q FEEDBACK_TO_ADDRESS wrangler.jsonc; then echo "Set the feedback destination address in wrangler.jsonc first" >&2; exit 1; fi
+# Where feedback is emailed: kept out of git, in feedback-to.txt (one line, a verified Email Routing address).
+TO=$(tr -d '[:space:]' < feedback-to.txt 2>/dev/null || true)
+if [ -z "$TO" ]; then echo "Put the feedback destination address in site/feedback-to.txt first" >&2; exit 1; fi
 # Keep public/ flat: wrangler 3 on Node 18.15 skips subfolders (no recursive readdir).
 if find public -mindepth 2 -type f | grep -q .; then echo "public/ must not contain subfolders" >&2; exit 1; fi
 # A private npm cache: ~/.npm on this Mac contains root-owned files that make npx fail.
@@ -35,5 +37,7 @@ PY
 echo "/download /$FILE 302" > public/_redirects
 
 # wrangler 3 still runs on Node 18 (wrangler 4 needs Node 22).
-npx --yes wrangler@3 deploy
+sed "s/FEEDBACK_TO_ADDRESS/$TO/g" wrangler.jsonc > .deploy.jsonc
+trap 'rm -f .deploy.jsonc' EXIT
+npx --yes wrangler@3 deploy --config .deploy.jsonc
 echo "Published $FILE ($SIZE bytes) to https://wick.qshlab.com"
