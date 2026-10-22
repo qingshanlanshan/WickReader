@@ -117,3 +117,8 @@ and reopen the app; files there are imported on launch.
 [Readium](https://github.com/readium/kotlin-toolkit) (BSD-3), [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)
 (Apache 2.0) with the Kokoro, Matcha (标贝) and Piper voices, [OpenCC](https://github.com/BYVoid/OpenCC)
 dictionaries (Apache 2.0), [ML Kit](https://developers.google.com/ml-kit) translation, pdfium.
+
+## License
+
+WickReader's own code is MIT-licensed ([LICENSE](LICENSE)). The bundled libraries, voices and
+dictionaries keep their own licenses (see Credits).
